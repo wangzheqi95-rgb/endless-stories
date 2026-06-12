@@ -608,15 +608,25 @@ let currentPmCat = '全部';
 
 // ═══ SUPABASE HELPERS ═══
 async function sbFetch(path, opts={}) {
-  const url = (SB_URL||localStorage.getItem('sb_url')) + '/rest/v1/' + path;
-  const key = SB_KEY || localStorage.getItem('sb_key');
-  const res = await fetch(url, {
-    headers: {'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'return=representation',...(opts.headers||{})},
-    ...opts
-  });
-  if(!res.ok) { const e=await res.text(); throw new Error(e); }
+  const sbUrl = (SB_URL||localStorage.getItem('sb_url')||'').replace(/\/$/,'');
+  const key = SB_KEY || localStorage.getItem('sb_key') || '';
+  if(!sbUrl || !key) throw new Error('Supabase not configured');
+  const url = sbUrl + '/rest/v1/' + path;
+  const method = opts.method || 'GET';
+  const headers = {
+    'apikey': key,
+    'Authorization': 'Bearer ' + key,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
+  if(method === 'POST' || method === 'PATCH') headers['Prefer'] = 'return=representation';
+  const fetchOpts = { method, headers };
+  if(opts.body) fetchOpts.body = opts.body;
+  const res = await fetch(url, fetchOpts);
+  if(!res.ok) { const e=await res.text(); throw new Error('Supabase '+res.status+': '+e); }
+  if(res.status === 204) return null;
   const ct = res.headers.get('content-type');
-  if(ct && ct.includes('json') && res.status !== 204) return res.json();
+  if(ct && ct.includes('json')) return res.json();
   return null;
 }
 
