@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Endless Stories</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;500&family=Noto+Sans+TC:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --black:#0e0e0e;--white:#fafaf8;--gray:#f4f2ef;--border:#e0ddd8;
+  --mid:#7a7570;--dark-mid:#4a4845;
+  --wine:#6B1A2A;--wine-light:#f5eced;--wine-mid:#9e3a4a;
+  --serif:'Cormorant Garamond','Noto Serif TC',serif;
+  --sans:'Noto Sans TC',-apple-system,sans-serif;
+}
+body{font-family:var(--sans);background:var(--white);color:var(--black);min-height:100vh;font-size:13px}
+a{text-decoration:none;color:inherit}
+button{font-family:var(--sans);cursor:pointer}
+input,textarea,select{font-family:var(--sans)}
+
+/* ── UTILITIES ── */
+.hidden{display:none!important}
+.serif{font-family:var(--serif)}
+
+/* ── MODE BAR ── */
+.mode-bar{background:var(--black);height:40px;display:flex;align-items:center;padding:0 28px;gap:0;border-bottom:1px solid #222}
+.mode-logo{font-family:var(--serif);font-size:15px;color:rgba(255,255,255,.9);letter-spacing:.15em;padding-right:24px;border-right:1px solid #333;margin-right:4px;font-weight:300}
+.mode-btn{padding:0 18px;height:40px;font-size:12px;color:rgba(255,255,255,.45);border:none;background:none;letter-spacing:.08em;border-bottom:2px solid transparent;transition:all .2s}
+.mode-btn.active{color:#fff;border-bottom-color:var(--wine)}
+
+/* ── ADMIN ── */
+#admin-mode{padding:24px;max-width:980px;margin:0 auto}
+.admin-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:24px}
+.atab{padding:10px 20px;font-size:12px;color:var(--mid);border:none;background:none;letter-spacing:.08em;border-bottom:2px solid transparent;transition:all .2s}
+.atab.active{color:var(--black);border-bottom-color:var(--black);font-weight:500}
+
+.card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:16px}
+.card-title{font-size:13px;font-weight:500;margin-bottom:16px;letter-spacing:.05em;text-transform:uppercase;color:var(--dark-mid)}
+.field-label{font-size:11px;color:var(--mid);display:block;margin-bottom:5px;letter-spacing:.05em;text-transform:uppercase}
+input[type=text],input[type=password],input[type=tel],input[type=email],input[type=number],textarea,select{
+  width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:4px;
+  font-size:13px;color:var(--black);background:#fff;outline:none;transition:border .2s
+}
+input:focus,textarea:focus,select:focus{border-color:var(--black)}
+.fgroup{margin-bottom:14px}
+.frow2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.frow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+/* BUTTONS */
+.btn{padding:9px 18px;border-radius:4px;font-size:12px;font-weight:500;cursor:pointer;border:none;letter-spacing:.08em;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-black{background:var(--black);color:#fff}
+.btn-black:hover{background:#333}
+.btn-wine{background:var(--wine);color:#fff}
+.btn-wine:hover{background:var(--wine-mid)}
+.btn-outline{background:#fff;color:var(--black);border:1px solid var(--border)}
+.btn-outline:hover{border-color:var(--black)}
+.btn-block{width:100%;justify-content:center}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.add-row-btn{width:100%;padding:8px;border:1px dashed var(--border);border-radius:4px;background:none;font-size:12px;color:var(--mid);cursor:pointer;margin-bottom:10px;letter-spacing:.05em}
+.add-row-btn:hover{border-color:var(--black);color:var(--black)}
+
+/* URL IMPORT */
+.url-list{display:flex;flex-direction:column;gap:7px;margin-bottom:10px}
+.url-row{display:flex;gap:7px}
+.url-row input{flex:1}
+.icon-btn{width:32px;height:32px;border:1px solid var(--border);border-radius:4px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--mid);flex-shrink:0}
+.icon-btn:hover{border-color:var(--black);color:var(--black)}
+.progress-bar{height:2px;background:var(--border);border-radius:1px;margin-top:12px;overflow:hidden;display:none}
+.progress-fill{height:100%;width:0;background:var(--black);transition:width .3s}
+.notice{background:var(--gray);border-radius:4px;padding:10px 14px;font-size:12px;color:var(--mid);line-height:1.6}
+
+/* CAT FILTER */
+.cat-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.cf-btn{padding:5px 14px;font-size:11px;border:1px solid var(--border);border-radius:20px;background:#fff;color:var(--mid);cursor:pointer;letter-spacing:.05em;transition:all .2s}
+.cf-btn.active{background:var(--black);color:#fff;border-color:var(--black)}
+
+/* PRODUCT MANAGE GRID */
+.pm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.pm-card{background:#fff;border:1px solid var(--border);border-radius:6px;overflow:hidden;position:relative}
+.pm-card-img{width:100%;height:180px;background:var(--gray);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--mid);font-size:12px}
+.pm-card-img img{width:100%;height:100%;object-fit:cover}
+.pm-card-body{padding:10px 12px 12px}
+.pm-card-name{font-size:13px;font-weight:500;margin-bottom:3px;line-height:1.4}
+.pm-card-cat{font-size:10px;color:var(--mid);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.pm-card-price{font-size:13px;font-weight:500;color:var(--wine);margin-bottom:6px}
+.pm-card-sizes{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:8px}
+.size-dot{font-size:10px;padding:1px 5px;background:var(--gray);border:1px solid var(--border);border-radius:2px;color:var(--mid)}
+.pm-card-actions{display:flex;gap:5px}
+.pm-btn{flex:1;padding:5px 4px;font-size:11px;border:1px solid var(--border);border-radius:3px;background:#fff;cursor:pointer;color:var(--black);letter-spacing:.03em}
+.pm-btn:hover{background:var(--gray)}
+.pm-btn.publish{background:var(--black);color:#fff;border-color:var(--black)}
+.pm-btn.unpublish{background:var(--wine);color:#fff;border-color:var(--wine)}
+.pub-badge{position:absolute;top:8px;left:8px;background:var(--wine);color:#fff;font-size:9px;padding:2px 8px;border-radius:2px;letter-spacing:.08em}
+.preorder-badge{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;font-size:9px;padding:2px 8px;border-radius:2px;letter-spacing:.05em}
+
+/* POST TAB */
+.picker-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.pick-btn{padding:5px 12px;font-size:12px;border:1px solid var(--border);border-radius:20px;background:#fff;color:var(--mid);cursor:pointer;transition:all .2s}
+.pick-btn.sel{background:var(--black);color:#fff;border-color:var(--black)}
+.platform-tabs{display:flex;gap:6px;margin-bottom:12px}
+.ptab{padding:6px 16px;font-size:12px;border:1px solid var(--border);border-radius:20px;background:#fff;color:var(--mid);cursor:pointer;letter-spacing:.05em}
+.ptab.active{background:var(--black);color:#fff;border-color:var(--black)}
+.post-preview-box{background:var(--gray);border:1px solid var(--border);border-radius:6px;padding:16px}
+.post-ph{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.post-av{width:34px;height:34px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:var(--mid);flex-shrink:0}
+.caption-area{width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:4px;font-size:13px;line-height:1.7;min-height:90px;background:#fff;outline:none;resize:none}
+.section-label{font-size:10px;color:var(--mid);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;margin-top:12px}
+.action-row{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap}
+.pub-status{font-size:12px;padding:8px 12px;border-radius:4px;margin-top:8px;display:none;line-height:1.5}
+.pub-status.ok{background:#f0f7f0;color:#2a6b2a;border:1px solid #b8dab8;display:block}
+.pub-status.err{background:#fdf2f0;color:var(--wine);border:1px solid #e8c0c0;display:block}
+
+/* ORDERS */
+.orders-grid{display:flex;flex-direction:column;gap:10px}
+.order-card{background:#fff;border:1px solid var(--border);border-radius:6px;padding:14px 16px}
+.order-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.order-no{font-size:11px;color:var(--mid);letter-spacing:.05em}
+.status-badge{font-size:10px;padding:2px 10px;border-radius:2px;letter-spacing:.05em}
+.status-pending{background:#fff8e8;color:#7a5500;border:1px solid #e8d8a0}
+.status-shipped{background:#e8f0f8;color:#1a4a8b;border:1px solid #b0c8e8}
+.status-done{background:#f0f7f0;color:#2a6b2a;border:1px solid #b8dab8}
+.order-name{font-size:14px;font-weight:500;margin-bottom:4px}
+.order-meta{font-size:12px;color:var(--mid);line-height:1.7}
+.order-items{font-size:12px;color:var(--mid);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)}
+.order-total{font-size:14px;font-weight:500;color:var(--wine);margin-top:6px}
+.tracking-row{display:flex;gap:7px;margin-top:8px}
+.tracking-row input{flex:1;font-size:12px;padding:6px 10px}
+
+/* API SETTINGS */
+.api-step{display:flex;gap:12px;margin-bottom:14px}
+.step-n{width:22px;height:22px;border-radius:50%;background:var(--wine);color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.step-t{font-size:13px;font-weight:500;margin-bottom:2px}
+.step-d{font-size:12px;color:var(--mid);line-height:1.6}
+.step-d a{color:var(--wine)}
+code{font-family:monospace;font-size:11px;background:var(--gray);padding:1px 5px;border-radius:2px}
+.fields-col{display:flex;flex-direction:column;gap:10px}
+.field-row{display:flex;gap:7px}
+.field-row input{flex:1}
+
+/* ── SHOP ── */
+#shop-mode{display:none}
+.shop-topbar{background:var(--black);height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 32px;position:sticky;top:40px;z-index:90}
+.shop-logo{font-family:var(--serif);font-size:20px;color:#fff;letter-spacing:.2em;font-weight:300}
+.shop-logo-sub{font-size:9px;letter-spacing:.3em;color:rgba(255,255,255,.4);display:block;text-align:center;margin-top:1px;font-family:var(--sans)}
+.cart-trigger{display:flex;align-items:center;gap:8px;padding:7px 16px;background:transparent;border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:2px;font-size:12px;letter-spacing:.08em;transition:all .2s}
+.cart-trigger:hover{border-color:rgba(255,255,255,.6)}
+.cart-n{background:var(--wine);width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600}
+
+.shop-nav{background:var(--white);border-bottom:1px solid var(--border);padding:0 32px;display:flex;overflow-x:auto;position:sticky;top:88px;z-index:89}
+.snav-btn{padding:12px 18px;font-size:11px;color:var(--mid);border:none;background:none;white-space:nowrap;border-bottom:2px solid transparent;letter-spacing:.1em;text-transform:uppercase;transition:all .2s}
+.snav-btn.active{color:var(--black);border-bottom-color:var(--wine);font-weight:500}
+
+/* HERO */
+.shop-hero{background:var(--black);padding:80px 32px;text-align:center;position:relative;overflow:hidden}
+.shop-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,#0e0e0e 0%,#1a0a0e 50%,#0e0e0e 100%)}
+.hero-inner{position:relative;z-index:1}
+.hero-es{font-family:var(--serif);font-size:54px;color:#fff;letter-spacing:.25em;font-weight:300;display:block;margin-bottom:8px}
+.hero-tagline{font-size:12px;letter-spacing:.3em;color:rgba(255,255,255,.45);text-transform:uppercase;font-weight:300}
+.hero-line{width:40px;height:1px;background:var(--wine);margin:16px auto}
+
+/* NEW ARRIVALS SECTION */
+.shop-section{max-width:1200px;margin:0 auto;padding:48px 32px}
+.shop-section-title{font-family:var(--serif);font-size:26px;font-weight:300;letter-spacing:.1em;margin-bottom:6px}
+.shop-section-sub{font-size:11px;color:var(--mid);letter-spacing:.15em;text-transform:uppercase;margin-bottom:28px}
+.section-divider{width:32px;height:1px;background:var(--wine);margin:12px 0 28px}
+
+/* PRODUCT GRID */
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px}
+.shop-card{cursor:pointer;group:true}
+.shop-card-img-wrap{width:100%;aspect-ratio:3/4;background:var(--gray);overflow:hidden;position:relative;margin-bottom:12px}
+.shop-card-img-wrap img{width:100%;height:100%;object-fit:cover;transition:transform .4s ease}
+.shop-card:hover .shop-card-img-wrap img{transform:scale(1.03)}
+.shop-card-cat{font-size:10px;color:var(--mid);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px}
+.shop-card-name{font-family:var(--serif);font-size:16px;font-weight:400;margin-bottom:4px;letter-spacing:.05em}
+.shop-card-sub{font-size:11px;color:var(--mid);margin-bottom:6px}
+.shop-card-price{font-size:14px;font-weight:500;color:var(--wine)}
+.shop-card-sizes{display:flex;gap:3px;margin-top:6px;flex-wrap:wrap}
+.shop-card-preorder{font-size:10px;color:var(--mid);margin-top:4px;letter-spacing:.05em}
+.empty-shop{grid-column:1/-1;text-align:center;padding:5rem;color:var(--mid);font-size:13px;letter-spacing:.05em}
+
+/* PRODUCT MODAL */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal-ov.open{display:flex}
+.modal-box{background:#fff;border-radius:0;max-width:780px;width:100%;max-height:92vh;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;position:relative}
+.modal-img-col{background:var(--gray);min-height:400px;overflow:hidden}
+.modal-img-col img{width:100%;height:100%;object-fit:cover}
+.modal-body-col{padding:32px 28px;display:flex;flex-direction:column}
+.modal-cat{font-size:10px;color:var(--mid);letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px}
+.modal-title{font-family:var(--serif);font-size:24px;font-weight:400;letter-spacing:.05em;margin-bottom:6px;line-height:1.3}
+.modal-price{font-size:22px;font-weight:500;color:var(--wine);margin-bottom:14px}
+.modal-desc{font-size:12px;color:var(--mid);line-height:1.9;margin-bottom:18px;border-top:1px solid var(--border);padding-top:14px}
+.modal-preorder{font-size:11px;color:var(--mid);background:var(--gray);padding:8px 12px;border-radius:3px;margin-bottom:16px;line-height:1.6}
+.opt-label{font-size:10px;color:var(--mid);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px}
+.size-opts{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.sopt{padding:6px 14px;border:1px solid var(--border);border-radius:2px;font-size:12px;cursor:pointer;background:#fff;transition:all .2s;letter-spacing:.03em}
+.sopt:hover{border-color:var(--black)}
+.sopt.sel{background:var(--black);color:#fff;border-color:var(--black)}
+.qty-row{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.qty-btn{width:28px;height:28px;border:1px solid var(--border);background:#fff;border-radius:2px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.qty-btn:hover{border-color:var(--black)}
+.qty-n{font-size:14px;min-width:26px;text-align:center}
+.add-cart-btn{width:100%;padding:13px;background:var(--black);color:#fff;border:none;font-size:12px;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;transition:background .2s;margin-top:auto}
+.add-cart-btn:hover{background:#333}
+.modal-close{position:absolute;top:12px;right:12px;width:30px;height:30px;background:rgba(0,0,0,.5);border:none;border-radius:50%;color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10}
+
+/* CART */
+.cart-ov-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:299}
+.cart-ov-bg.open{display:block}
+.cart-side{display:none;position:fixed;right:0;top:0;bottom:0;width:380px;background:#fff;z-index:300;flex-direction:column;border-left:1px solid var(--border)}
+.cart-side.open{display:flex}
+.cart-hd{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.cart-hd h2{font-family:var(--serif);font-size:18px;font-weight:400;letter-spacing:.08em}
+.cart-close{background:none;border:none;font-size:16px;color:var(--mid);cursor:pointer;padding:4px}
+.cart-items-wrap{flex:1;overflow-y:auto;padding:16px 24px}
+.citem{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.citem-img{width:64px;height:80px;background:var(--gray);overflow:hidden;flex-shrink:0}
+.citem-img img{width:100%;height:100%;object-fit:cover}
+.citem-info{flex:1}
+.citem-name{font-size:13px;font-weight:500;margin-bottom:3px;line-height:1.3}
+.citem-meta{font-size:11px;color:var(--mid);margin-bottom:5px;letter-spacing:.03em}
+.citem-price{font-size:13px;color:var(--wine);font-weight:500}
+.citem-rm{background:none;border:none;color:var(--mid);font-size:13px;padding:2px;line-height:1}
+.cart-empty{text-align:center;padding:40px 0;color:var(--mid);font-size:13px;letter-spacing:.05em}
+.cart-ft{padding:20px 24px;border-top:1px solid var(--border)}
+.cart-tot{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+.cart-tot span{font-size:12px;color:var(--mid);letter-spacing:.05em;text-transform:uppercase}
+.cart-tot strong{font-family:var(--serif);font-size:22px;color:var(--wine);font-weight:400}
+
+/* CHECKOUT */
+.checkout-wrap{display:none;max-width:600px;margin:0 auto;padding:40px 28px}
+.checkout-wrap.active{display:block}
+.back-link{font-size:12px;color:var(--mid);letter-spacing:.08em;display:inline-flex;align-items:center;gap:4px;margin-bottom:24px;cursor:pointer}
+.back-link:hover{color:var(--black)}
+.checkout-title{font-family:var(--serif);font-size:28px;font-weight:300;letter-spacing:.08em;margin-bottom:6px}
+.checkout-sub{font-size:12px;color:var(--mid);letter-spacing:.1em;text-transform:uppercase;margin-bottom:28px}
+.order-sum{background:var(--gray);border-radius:4px;padding:16px;margin-bottom:20px}
+.order-sum-title{font-size:10px;color:var(--mid);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px}
+.sum-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--mid)}
+.sum-row.tot{font-size:14px;font-weight:500;color:var(--black);border-top:1px solid var(--border);padding-top:10px;margin-top:6px}
+.cod-box{border:1px solid var(--border);border-radius:4px;padding:12px 14px;font-size:12px;color:var(--mid);line-height:1.7;margin-bottom:18px;background:#fff}
+.cod-box strong{color:var(--black)}
+.ship-opts{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.ship-opt{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:4px;cursor:pointer;transition:border .2s}
+.ship-opt:hover{border-color:var(--dark-mid)}
+.ship-opt.sel{border-color:var(--black);background:#fafaf8}
+.ship-opt input{margin-top:2px;accent-color:var(--black)}
+.ship-name{font-size:13px;font-weight:500;margin-bottom:2px}
+.ship-desc{font-size:11px;color:var(--mid)}
+.ship-fee{font-size:13px;font-weight:500;color:var(--wine);white-space:nowrap}
+.submit-btn{width:100%;padding:14px;background:var(--black);color:#fff;border:none;font-size:12px;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;transition:background .2s;margin-top:8px}
+.submit-btn:hover{background:#333}
+
+/* SUCCESS */
+.success-wrap{display:none;max-width:500px;margin:60px auto;padding:0 28px;text-align:center}
+.success-wrap.active{display:block}
+.succ-line{width:40px;height:1px;background:var(--wine);margin:0 auto 24px}
+.succ-title{font-family:var(--serif);font-size:32px;font-weight:300;letter-spacing:.1em;margin-bottom:12px}
+.succ-desc{font-size:13px;color:var(--mid);line-height:1.9;margin-bottom:28px}
+.succ-detail{background:var(--gray);border-radius:4px;padding:18px;text-align:left;margin-bottom:24px}
+.succ-detail-title{font-size:10px;color:var(--mid);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px}
+.succ-row{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--border)}
+.succ-row:last-child{border:none}
+.succ-actions{display:flex;gap:8px;justify-content:center}
+
+/* TOAST */
+#toast-el{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--black);color:#fff;padding:10px 20px;border-radius:2px;font-size:12px;letter-spacing:.08em;opacity:0;transition:all .3s;pointer-events:none;z-index:9999;white-space:nowrap}
+
+@media(max-width:700px){
+  .shop-grid{grid-template-columns:repeat(2,1fr);gap:14px}
+  .modal-box{grid-template-columns:1fr;max-height:95vh}
+  .modal-img-col{min-height:260px}
+  .cart-side{width:100%}
+  .frow2,.frow3{grid-template-columns:1fr}
+  .shop-hero{padding:56px 24px}
+  .hero-es{font-size:36px}
+  .shop-section{padding:32px 20px}
+  .action-row{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<!-- MODE BAR -->
+<div class="mode-bar">
+  <span class="mode-logo">ES</span>
+  <button class="mode-btn active" onclick="switchMode('admin',this)">ADMIN</button>
+  <button class="mode-btn" onclick="switchMode('shop',this)">STOREFRONT</button>
+</div>
+
+<!-- ═══════════════ ADMIN ═══════════════ -->
+<div id="admin-mode">
+  <div style="max-width:980px;margin:0 auto;padding:24px">
+    <div class="admin-tabs">
+      <button class="atab active" onclick="switchAtab('import',this)">IMPORT</button>
+      <button class="atab" onclick="switchAtab('manage',this)">PRODUCTS</button>
+      <button class="atab" onclick="switchAtab('post',this)">PUBLISH</button>
+      <button class="atab" onclick="switchAtab('orders',this)">ORDERS</button>
+      <button class="atab" onclick="switchAtab('apiset',this)">SETTINGS</button>
+    </div>
+
+    <!-- IMPORT -->
+    <div id="atab-import" class="atab-content">
+      <div class="card">
+        <div class="card-title">Import Products</div>
+        <div class="fgroup">
+          <label class="field-label">Taobao URLs</label>
+          <div class="url-list" id="url-list">
+            <div class="url-row"><input type="text" placeholder="https://item.taobao.com/item.htm?id=..."/><button class="icon-btn" onclick="delUrl(this)">x</button></div>
+            <div class="url-row"><input type="text" placeholder="https://item.taobao.com/item.htm?id=..."/><button class="icon-btn" onclick="delUrl(this)">x</button></div>
+          </div>
+          <button class="add-row-btn" onclick="addUrlRow()">+ Add Row</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-black btn-block" id="parse-btn" onclick="parseUrls()" style="flex:2">AI Parse Products</button>
+            <button class="btn btn-outline" onclick="addManual()" style="flex:1">+ Manual Add</button>
+          </div>
+          <div class="progress-bar" id="loading-bar"><div class="progress-fill" id="loading-fill"></div></div>
+        </div>
+      </div>
+      <div class="notice">AI will infer product details from the URL ID. After parsing, review and edit in the Products tab before publishing.</div>
+    </div>
+
+    <!-- MANAGE -->
+    <div id="atab-manage" class="atab-content hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase">All Products <span id="pm-count" style="font-weight:400;color:var(--mid)"></span></div>
+        <button class="btn btn-outline" onclick="addManual()" style="font-size:11px;padding:6px 14px">+ Add</button>
+      </div>
+      <div class="cat-filter" id="pm-cat-filter">
+        <button class="cf-btn active" onclick="filterPmCat('全部',this)">All</button>
+        <button class="cf-btn" onclick="filterPmCat('上裝',this)">上裝</button>
+        <button class="cf-btn" onclick="filterPmCat('下裝',this)">下裝</button>
+        <button class="cf-btn" onclick="filterPmCat('配飾',this)">配飾</button>
+        <button class="cf-btn" onclick="filterPmCat('鞋子',this)">鞋子</button>
+        <button class="cf-btn" onclick="filterPmCat('包包',this)">包包</button>
+      </div>
+      <div class="pm-grid" id="pm-grid"></div>
+    </div>
+
+    <!-- POST -->
+    <div id="atab-post" class="atab-content hidden">
+      <div class="card">
+        <div class="card-title">Select Products</div>
+        <div class="picker-grid" id="post-picker"></div>
+        <div style="font-size:12px;color:var(--mid)">Selected: <span id="post-sel-names" style="color:var(--black)">None</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Caption Settings</div>
+        <div class="frow3" style="margin-bottom:12px">
+          <div class="fgroup">
+            <label class="field-label">Style</label>
+            <select id="caption-style">
+              <option value="detail">Professional — fabric, cut, styling details</option>
+              <option value="japan">Japanese minimal — understated, elegant</option>
+              <option value="korea">Korean trend — bold, personality-driven</option>
+              <option value="promo">Promotional — scarcity, urgency</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label class="field-label">Length</label>
+            <select id="caption-length">
+              <option value="short">Short (under 100 chars)</option>
+              <option value="medium" selected>Medium (150-200 chars)</option>
+              <option value="long">Long (280-320 chars)</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label class="field-label">Arrival Date</label>
+            <input type="text" id="arrival-date" placeholder="e.g. Arrives 6/20"/>
+          </div>
+        </div>
+        <div style="margin-bottom:12px">
+          <label class="field-label">Include</label>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px">
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="inc-price" checked> Price</label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="inc-size" checked> Sizes</label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="inc-arrival" checked> Arrival</label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="inc-detail" checked> Product details</label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="inc-cta" checked> Call to action</label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="inc-link" checked> Shop link</label>
+          </div>
+        </div>
+        <div class="frow2">
+          <div class="fgroup">
+            <label class="field-label">Custom Hashtags (comma separated)</label>
+            <input type="text" id="custom-hashtags" placeholder="#EndlessStories, #日系穿搭"/>
+          </div>
+          <div class="fgroup">
+            <label class="field-label">Additional Notes for AI</label>
+            <input type="text" id="caption-note" placeholder="e.g. autumn collection, workwear friendly"/>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Preview & Publish</div>
+        <div class="platform-tabs">
+          <button class="ptab active" onclick="switchPtab('ig',this)">Instagram</button>
+          <button class="ptab" onclick="switchPtab('fb',this)">Facebook</button>
+        </div>
+        <div class="post-preview-box">
+          <div class="post-ph">
+            <div class="post-av" id="post-av">ES</div>
+            <div>
+              <div style="font-size:13px;font-weight:500" id="post-pname">endless.stories</div>
+              <div style="font-size:11px;color:var(--mid)">Just now</div>
+            </div>
+            <button class="btn btn-outline" style="margin-left:auto;font-size:11px;padding:5px 10px" onclick="generateCaption()">Regenerate</button>
+          </div>
+          <div class="section-label">Caption</div>
+          <textarea class="caption-area" id="post-caption" rows="7" placeholder="Select products above, then click Generate Caption"></textarea>
+          <div class="section-label">Hashtags</div>
+          <textarea class="caption-area" id="post-hashtags" rows="2" style="font-size:12px" placeholder="Hashtags will appear here separately"></textarea>
+        </div>
+        <div class="action-row">
+          <button class="btn btn-outline" onclick="generateCaption()">Generate Caption</button>
+          <button class="btn btn-outline" onclick="copyCaption()">Copy Caption</button>
+          <button class="btn btn-outline" onclick="copyHashtags()">Copy Hashtags</button>
+          <button class="btn btn-black" onclick="postToMeta()">Publish via API</button>
+        </div>
+        <div class="pub-status" id="pub-status"></div>
+      </div>
+    </div>
+
+    <!-- ORDERS -->
+    <div id="atab-orders" class="atab-content hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase">Orders <span id="orders-count" style="font-weight:400;color:var(--mid)"></span></div>
+        <div style="display:flex;gap:7px">
+          <button class="btn btn-outline" onclick="exportToSheets()" style="font-size:11px;padding:6px 12px">Export to Google Sheets</button>
+          <button class="btn btn-outline" onclick="loadOrders()" style="font-size:11px;padding:6px 12px">Refresh</button>
+        </div>
+      </div>
+      <div class="orders-grid" id="orders-grid"></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="atab-apiset" class="atab-content hidden">
+      <div class="card">
+        <div class="card-title">Supabase</div>
+        <div class="fields-col">
+          <div class="fgroup">
+            <label class="field-label">Project URL</label>
+            <div class="field-row"><input type="text" id="sb-url" placeholder="https://xxxx.supabase.co"/><button class="btn btn-black" onclick="saveSettings()" style="padding:9px 14px;font-size:11px">Save</button></div>
+          </div>
+          <div class="fgroup">
+            <label class="field-label">Anon Key</label>
+            <div class="field-row"><input type="password" id="sb-key" placeholder="eyJhbG..."/><button class="btn btn-black" onclick="saveSettings()" style="padding:9px 14px;font-size:11px">Save</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Meta Graph API</div>
+        <div class="fields-col">
+          <div class="fgroup"><label class="field-label">Page Access Token</label><div class="field-row"><input type="password" id="meta-token" placeholder="EAABxxx..."/><button class="btn btn-black" onclick="saveSettings()" style="padding:9px 14px;font-size:11px">Save</button></div></div>
+          <div class="fgroup"><label class="field-label">Facebook Page ID</label><div class="field-row"><input type="text" id="fb-page-id" placeholder="123456789"/><button class="btn btn-black" onclick="saveSettings()" style="padding:9px 14px;font-size:11px">Save</button></div></div>
+          <div class="fgroup"><label class="field-label">Instagram Business Account ID</label><div class="field-row"><input type="text" id="ig-account-id" placeholder="17841400000000000"/><button class="btn btn-black" onclick="saveSettings()" style="padding:9px 14px;font-size:11px">Save</button></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Google Sheets — Order Sync</div>
+        <div class="notice" style="margin-bottom:12px">Orders are automatically exported when you click "Export to Google Sheets" in the Orders tab. Paste your Google Apps Script Web App URL below to enable one-click sync.</div>
+        <div class="fgroup"><label class="field-label">Apps Script Web App URL</label><div class="field-row"><input type="text" id="sheets-url" placeholder="https://script.google.com/macros/s/.../exec"/><button class="btn btn-black" onclick="saveSettings()" style="padding:9px 14px;font-size:11px">Save</button></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ SHOP ═══════════════ -->
+<div id="shop-mode">
+  <div class="shop-topbar">
+    <div></div>
+    <div style="text-align:center">
+      <span class="shop-logo">ENDLESS STORIES</span>
+      <span class="shop-logo-sub">CURATED FASHION</span>
+    </div>
+    <button class="cart-trigger" onclick="openCart()">
+      BAG <span class="cart-n" id="cart-n">0</span>
+    </button>
+  </div>
+
+  <div class="shop-nav" id="shop-nav">
+    <button class="snav-btn active" onclick="shopFilter('全部',this)">All</button>
+    <button class="snav-btn" onclick="shopFilter('上裝',this)">Tops</button>
+    <button class="snav-btn" onclick="shopFilter('下裝',this)">Bottoms</button>
+    <button class="snav-btn" onclick="shopFilter('配飾',this)">Accessories</button>
+    <button class="snav-btn" onclick="shopFilter('鞋子',this)">Shoes</button>
+    <button class="snav-btn" onclick="shopFilter('包包',this)">Bags</button>
+  </div>
+
+  <div id="shop-main">
+    <div class="shop-hero">
+      <div class="hero-inner">
+        <span class="hero-es">ES</span>
+        <div class="hero-line"></div>
+        <div class="hero-tagline">Every piece, chosen for you.</div>
+      </div>
+    </div>
+
+    <!-- NEW ARRIVALS -->
+    <div class="shop-section" id="new-arrivals-section">
+      <div class="shop-section-title">New Arrivals</div>
+      <div class="section-divider"></div>
+      <div class="shop-grid" id="new-arrivals-grid"></div>
+    </div>
+
+    <!-- ALL / FILTERED -->
+    <div class="shop-section" id="all-products-section" style="padding-top:0">
+      <div class="shop-section-title" id="shop-cat-title">All Pieces</div>
+      <div class="section-divider"></div>
+      <div class="shop-grid" id="shop-grid"></div>
+    </div>
+  </div>
+
+  <!-- CHECKOUT -->
+  <div class="checkout-wrap" id="checkout-wrap">
+    <div class="back-link" onclick="showShopMain()">← Continue Shopping</div>
+    <div class="checkout-title">Checkout</div>
+    <div class="checkout-sub">Cash on Delivery</div>
+    <div class="order-sum">
+      <div class="order-sum-title">Order Summary</div>
+      <div id="checkout-items-detail"></div>
+      <div class="sum-row tot"><span>Total (incl. shipping)</span><span id="checkout-total-amt">NT$0</span></div>
+    </div>
+    <div class="cod-box"><strong>Cash on Delivery:</strong> Payment is collected upon delivery. Please ensure someone is available to receive the package.</div>
+    <div class="fgroup"><label class="field-label">Full Name *</label><input type="text" id="f-name" placeholder="Your full name"/></div>
+    <div class="frow2">
+      <div class="fgroup"><label class="field-label">Phone *</label><input type="tel" id="f-phone" placeholder="09xx-xxx-xxx"/></div>
+      <div class="fgroup"><label class="field-label">Email</label><input type="email" id="f-email" placeholder="your@email.com"/></div>
+    </div>
+    <div class="fgroup"><label class="field-label">Delivery Address *</label><input type="text" id="f-address" placeholder="City, District, Street, Number"/></div>
+    <div class="fgroup"><label class="field-label">Notes</label><textarea id="f-note" rows="2" placeholder="Special requests..."></textarea></div>
+    <div class="fgroup">
+      <label class="field-label">Shipping Method</label>
+      <div class="ship-opts">
+        <label class="ship-opt sel" onclick="selShip(this,80)"><input type="radio" name="ship" checked/><div style="flex:1"><div class="ship-name">Chunghwa Post (COD)</div><div class="ship-desc">3-5 working days</div></div><div class="ship-fee">NT$80</div></label>
+        <label class="ship-opt" onclick="selShip(this,100)"><input type="radio" name="ship"/><div style="flex:1"><div class="ship-name">Home Delivery (COD)</div><div class="ship-desc">2-3 working days, time slot available</div></div><div class="ship-fee">NT$100</div></label>
+        <label class="ship-opt" onclick="selShip(this,60)"><input type="radio" name="ship"/><div style="flex:1"><div class="ship-name">Convenience Store Pickup</div><div class="ship-desc">7-11 / FamilyMart, 2-4 working days</div></div><div class="ship-fee">NT$60</div></label>
+      </div>
+    </div>
+    <button class="submit-btn" onclick="submitOrder()">Confirm Order — Cash on Delivery</button>
+  </div>
+
+  <!-- SUCCESS -->
+  <div class="success-wrap" id="success-wrap">
+    <div class="succ-line"></div>
+    <div class="succ-title">Order Confirmed</div>
+    <div class="succ-desc">Thank you for your order. We will ship as soon as possible and notify you by email.</div>
+    <div class="succ-detail" id="succ-detail"></div>
+    <div class="succ-actions">
+      <button class="btn btn-black" onclick="showShopMain()">Continue Shopping</button>
+    </div>
+  </div>
+
+  <!-- PRODUCT MODAL -->
+  <div class="modal-ov" id="prod-modal" onclick="closeProdModalOv(event)">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeProdModal()">x</button>
+      <div class="modal-img-col" id="modal-img-col"></div>
+      <div class="modal-body-col">
+        <div class="modal-cat" id="modal-cat"></div>
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-price" id="modal-price"></div>
+        <div class="modal-desc" id="modal-desc"></div>
+        <div class="modal-preorder" id="modal-preorder" style="display:none"></div>
+        <div class="opt-label">Size</div>
+        <div class="size-opts" id="modal-size-opts"></div>
+        <div class="opt-label">Quantity</div>
+        <div class="qty-row">
+          <button class="qty-btn" onclick="chgQty(-1)">-</button>
+          <span class="qty-n" id="modal-qty-n">1</span>
+          <button class="qty-btn" onclick="chgQty(1)">+</button>
+        </div>
+        <button class="add-cart-btn" onclick="addToCart()">Add to Bag</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CART -->
+  <div class="cart-ov-bg" id="cart-ov-bg" onclick="closeCart()"></div>
+  <div class="cart-side" id="cart-side">
+    <div class="cart-hd"><h2>Your Bag</h2><button class="cart-close" onclick="closeCart()">x</button></div>
+    <div class="cart-items-wrap" id="cart-items-wrap"></div>
+    <div class="cart-ft">
+      <div class="cart-tot"><span>Subtotal</span><strong id="cart-subtotal">NT$0</strong></div>
+      <button class="btn btn-black btn-block" onclick="goCheckout()">Proceed to Checkout</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-el"></div>
+
+<script>
+// ═══ CONFIG ═══
+const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
+let SB_URL = localStorage.getItem('sb_url') || '';
+let SB_KEY = localStorage.getItem('sb_key') || '';
+
+// ═══ STATE ═══
+let products = [];
+let cart = [];
+let currentProd = null;
+let currentQty = 1;
+let currentSize = null;
+let shippingFee = 80;
+let currentPlatform = 'ig';
+let selectedPostIds = new Set();
+let currentPmCat = '全部';
+
+// ═══ SUPABASE HELPERS ═══
+async function sbFetch(path, opts={}) {
+  const url = (SB_URL||localStorage.getItem('sb_url')) + '/rest/v1/' + path;
+  const key = SB_KEY || localStorage.getItem('sb_key');
+  const res = await fetch(url, {
+    headers: {'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json','Prefer':'return=representation',...(opts.headers||{})},
+    ...opts
+  });
+  if(!res.ok) { const e=await res.text(); throw new Error(e); }
+  const ct = res.headers.get('content-type');
+  if(ct && ct.includes('json') && res.status !== 204) return res.json();
+  return null;
+}
+
+async function loadProducts() {
+  try {
+    const data = await sbFetch('products?order=created_at.desc');
+    products = data || [];
+  } catch(e) { products = []; }
+}
+
+async function loadPublishedProducts() {
+  try {
+    const data = await sbFetch('products?published=eq.true&order=created_at.desc');
+    products = data || [];
+  } catch(e) { products = []; }
+}
+
+// ═══ MODE SWITCHER ═══
+function switchMode(mode, btn) {
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('admin-mode').style.display = mode==='admin' ? '' : 'none';
+  document.getElementById('shop-mode').style.display = mode==='shop' ? '' : 'none';
+  if(mode==='shop') { loadPublishedProducts().then(()=>renderShop('全部')); }
+  if(mode==='admin') {
+    const activeTab = document.querySelector('.atab.active');
+    if(activeTab && activeTab.textContent==='PRODUCTS') renderManageGrid();
+    if(activeTab && activeTab.textContent==='ORDERS') loadOrders();
+  }
+}
+
+// ═══ ADMIN TABS ═══
+function switchAtab(name, btn) {
+  document.querySelectorAll('.atab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.atab-content').forEach(c=>c.classList.add('hidden'));
+  document.getElementById('atab-'+name).classList.remove('hidden');
+  if(name==='manage') loadProducts().then(()=>renderManageGrid());
+  if(name==='post') loadProducts().then(()=>renderPostPicker());
+  if(name==='orders') loadOrders();
+}
+
+// ═══ IMPORT ═══
+function addUrlRow() {
+  const r=document.createElement('div'); r.className='url-row';
+  r.innerHTML=`<input type="text" placeholder="https://item.taobao.com/item.htm?id=..."/><button class="icon-btn" onclick="delUrl(this)">x</button>`;
+  document.getElementById('url-list').appendChild(r);
+}
+function delUrl(btn) { if(document.getElementById('url-list').children.length>1) btn.parentElement.remove(); }
+
+async function parseUrls() {
+  const urls=[...document.querySelectorAll('#url-list input')].map(i=>i.value.trim()).filter(Boolean);
+  if(!urls.length){alert('Please enter at least one URL');return;}
+  const btn=document.getElementById('parse-btn');
+  const bar=document.getElementById('loading-bar');
+  const fill=document.getElementById('loading-fill');
+  btn.disabled=true; btn.textContent='Parsing...';
+  bar.style.display='block';
+  let prog=0; const iv=setInterval(()=>{prog=Math.min(prog+7,85);fill.style.width=prog+'%';},200);
+  try {
+    const prompt=`You are an e-commerce assistant. Based on these Taobao product URLs, infer realistic women's fashion product details (Japanese/Korean/French style). Return ONLY a JSON array, no markdown.
+URLs:\n${urls.join('\n')}
+Each object: {"name":"Product name (Traditional Chinese)","sub":"Subtitle (style note)","description":"50-char description (Traditional Chinese)","price":number,"category":"上裝 or 下裝 or 配飾 or 鞋子 or 包包","sizes":["S","M","L","XL"],"style_tags":["日系","簡約"],"preorder":true,"arrival_date":"7-14 days","stock_limit":10,"url":"original url"}
+Return ${urls.length} products.`;
+    const res=await fetch(ANTHROPIC_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    const parsed=JSON.parse(data.content[0].text.replace(/```json|```/g,'').trim());
+    clearInterval(iv); fill.style.width='100%';
+    // Save to Supabase
+    for(const p of parsed) {
+      await sbFetch('products',{method:'POST',body:JSON.stringify({...p,images:[],published:false})});
+    }
+    setTimeout(()=>{
+      bar.style.display='none'; fill.style.width='0%';
+      btn.disabled=false; btn.textContent='AI Parse Products';
+      showToast(`${parsed.length} products added — review in Products tab`);
+      switchAtab('manage',document.querySelectorAll('.atab')[1]);
+    },400);
+  } catch(e) {
+    clearInterval(iv); bar.style.display='none'; fill.style.width='0%';
+    btn.disabled=false; btn.textContent='AI Parse Products';
+    showToast('Could not connect to Supabase or AI — check Settings');
+  }
+}
+
+function addManual() {
+  const name=prompt('Product name:'); if(!name) return;
+  const price=parseInt(prompt('Price (number):')||'0');
+  const cat=prompt('Category (上裝/下裝/配飾/鞋子/包包):')||'上裝';
+  const sizes=(prompt('Sizes (comma-separated):')||'S,M,L').split(',').map(s=>s.trim()).filter(Boolean);
+  const desc=prompt('Description:')||'';
+  const arrival=prompt('Arrival date (e.g. 7-14 days):')||'';
+  const img1=prompt('Image URL:')||'';
+  const p={name,sub:'',description:desc,price,category:cat,sizes,images:img1?[img1]:[],style_tags:[],arrival_date:arrival,stock_limit:10,published:false,preorder:true};
+  sbFetch('products',{method:'POST',body:JSON.stringify(p)})
+    .then(()=>{showToast('Product added');loadProducts().then(()=>renderManageGrid());})
+    .catch(()=>showToast('Error saving — check Supabase settings'));
+}
+
+// ═══ MANAGE GRID ═══
+function renderManageGrid() {
+  const grid=document.getElementById('pm-grid');
+  const filtered=currentPmCat==='全部'?products:products.filter(p=>p.category===currentPmCat);
+  document.getElementById('pm-count').textContent=`(${products.length} total, ${products.filter(p=>p.published).length} live)`;
+  if(!filtered.length){grid.innerHTML='<div style="grid-column:1/-1;padding:3rem;text-align:center;color:var(--mid);font-size:12px;letter-spacing:.05em">No products found. Import or add manually.</div>';return;}
+  grid.innerHTML=filtered.map(p=>`
+    <div class="pm-card">
+      ${p.published?'<div class="pub-badge">LIVE</div>':''}
+      ${p.preorder?'<div class="preorder-badge">PRE-ORDER</div>':''}
+      <div class="pm-card-img">${p.images&&p.images[0]?`<img src="${p.images[0]}" alt="${p.name}">`:'No image'}</div>
+      <div class="pm-card-body">
+        <div class="pm-card-cat">${p.category||''}</div>
+        <div class="pm-card-name">${p.name}</div>
+        <div class="pm-card-price">NT$${(p.price||0).toLocaleString()}</div>
+        <div class="pm-card-sizes">${(p.sizes||[]).map(s=>`<span class="size-dot">${s}</span>`).join('')}</div>
+        <div class="pm-card-actions">
+          <button class="pm-btn ${p.published?'unpublish':'publish'}" onclick="togglePublish('${p.id}',${p.published})">${p.published?'Unpublish':'Publish'}</button>
+          <button class="pm-btn" onclick="editProduct('${p.id}')">Edit</button>
+          <button class="pm-btn" onclick="deleteProduct('${p.id}')">Del</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterPmCat(cat,btn) {
+  currentPmCat=cat;
+  document.querySelectorAll('#pm-cat-filter .cf-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderManageGrid();
+}
+
+async function togglePublish(id,current) {
+  try {
+    await sbFetch(`products?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({published:!current})});
+    await loadProducts(); renderManageGrid();
+    showToast(current?'Product unpublished':'Product is now live');
+  } catch(e){showToast('Error updating product');}
+}
+
+async function editProduct(id) {
+  const p=products.find(x=>x.id===id); if(!p) return;
+  const n=prompt('Name:',p.name); if(n===null) return;
+  const pr=parseInt(prompt('Price:',p.price)||p.price);
+  const sz=(prompt('Sizes (comma-separated):',p.sizes.join(','))||p.sizes.join(',')).split(',').map(s=>s.trim()).filter(Boolean);
+  const img=(prompt('Image URL:',p.images&&p.images[0]?p.images[0]:'')||'');
+  const desc=prompt('Description:',p.description||'')||'';
+  const arrival=prompt('Arrival date:',p.arrival_date||'')||'';
+  try {
+    await sbFetch(`products?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({name:n,price:pr,sizes:sz,images:img?[img]:p.images,description:desc,arrival_date:arrival})});
+    await loadProducts(); renderManageGrid(); showToast('Product updated');
+  } catch(e){showToast('Error updating product');}
+}
+
+async function deleteProduct(id) {
+  if(!confirm('Delete this product?')) return;
+  try {
+    await sbFetch(`products?id=eq.${id}`,{method:'DELETE'});
+    await loadProducts(); renderManageGrid(); showToast('Product deleted');
+  } catch(e){showToast('Error deleting product');}
+}
+
+// ═══ POST ═══
+function renderPostPicker() {
+  const el=document.getElementById('post-picker');
+  const pub=products.filter(p=>p.published);
+  if(!pub.length){el.innerHTML='<div style="font-size:12px;color:var(--mid)">No published products. Publish products first.</div>';return;}
+  el.innerHTML=pub.map(p=>`<button onclick="togglePostSel('${p.id}',this)" class="pick-btn ${selectedPostIds.has(p.id)?'sel':''}">${p.name}</button>`).join('');
+  updatePostSelNames();
+}
+
+function togglePostSel(id,btn) {
+  if(selectedPostIds.has(id)) selectedPostIds.delete(id); else selectedPostIds.add(id);
+  btn.classList.toggle('sel',selectedPostIds.has(id));
+  updatePostSelNames();
+}
+
+function updatePostSelNames() {
+  const names=[...selectedPostIds].map(id=>{ const p=products.find(x=>x.id===id); return p?p.name:''; }).filter(Boolean);
+  document.getElementById('post-sel-names').textContent=names.length?names.join(', '):'None';
+}
+
+function switchPtab(p,btn) {
+  currentPlatform=p;
+  document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('post-av').textContent=p==='ig'?'IG':'FB';
+  document.getElementById('post-pname').textContent=p==='ig'?'endless.stories':'Endless Stories';
+}
+
+async function generateCaption() {
+  if(!selectedPostIds.size){alert('Select at least one product');return;}
+  const sel=products.filter(p=>selectedPostIds.has(p.id));
+  const captionEl=document.getElementById('post-caption');
+  const hashEl=document.getElementById('post-hashtags');
+  captionEl.value='Generating...'; hashEl.value='';
+  const styleMap={detail:'Professional fashion copy — describe fabric, cut, silhouette, styling details and occasions clearly',japan:'Japanese minimal — understated, poetic, sophisticated. Fewer words, more atmosphere.',korea:'Korean trend — confident, expressive, current.',promo:'Promotional — emphasize limited quantity, scarcity, urgency.'};
+  const lengthMap={short:'under 100 characters',medium:'150-200 characters',long:'280-320 characters'};
+  const style=document.getElementById('caption-style').value;
+  const length=document.getElementById('caption-length').value;
+  const arrival=document.getElementById('arrival-date').value.trim();
+  const customTags=document.getElementById('custom-hashtags').value.trim();
+  const note=document.getElementById('caption-note').value.trim();
+  const platform=currentPlatform==='ig'?'Instagram':'Facebook';
+  const incPrice=document.getElementById('inc-price').checked;
+  const incSize=document.getElementById('inc-size').checked;
+  const incArrival=document.getElementById('inc-arrival').checked;
+  const incDetail=document.getElementById('inc-detail').checked;
+  const incCta=document.getElementById('inc-cta').checked;
+  const incLink=document.getElementById('inc-link').checked;
+  const productList=sel.map(p=>{
+    let s=`[${p.name}]`;
+    if(incDetail&&p.description) s+=` — ${p.description}`;
+    if(incPrice) s+=` | NT$${p.price}`;
+    if(incSize) s+=` | Sizes: ${(p.sizes||[]).join('/')}`;
+    return s;
+  }).join('\n');
+  const includes=[];
+  if(incArrival&&arrival) includes.push(`Mention arrival: ${arrival}`);
+  if(incCta) includes.push('End with a clear call to action (DM or link to shop)');
+  if(incLink) includes.push('Last line: "Shop now: [shop link]"');
+  const tagInstruction=customTags?`Use these hashtags: ${customTags}, add related ones to reach 8-10 total`:'Generate 8-10 relevant Taiwan fashion hashtags';
+  const prompt=`You are a Taiwanese fashion brand copywriter. Write a ${platform} post caption in Traditional Chinese.
+
+Style: ${styleMap[style]}
+Length: Main caption ${lengthMap[length]}. No emoji.
+Products:
+${productList}
+${includes.length?'\nMust include:\n'+includes.map(i=>`- ${i}`).join('\n'):''}
+${note?`\nExtra notes: ${note}`:''}
+Hashtag instruction: ${tagInstruction}
+
+Reply in this exact format (no other text):
+===CAPTION===
+(caption here)
+===HASHTAGS===
+(hashtags here, space-separated)`;
+  try {
+    const res=await fetch(ANTHROPIC_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    const text=data.content[0].text;
+    const capMatch=text.match(/===CAPTION===([\s\S]*?)===HASHTAGS===/);
+    const tagMatch=text.match(/===HASHTAGS===([\s\S]*)$/);
+    captionEl.value=capMatch?capMatch[1].trim():text;
+    hashEl.value=tagMatch?tagMatch[1].trim():'';
+  } catch(e){
+    captionEl.value=sel.map(p=>`${p.name}\nNT$${p.price} | ${(p.sizes||[]).join(' / ')}${p.description?'\n'+p.description:''}`).join('\n\n')+(arrival?'\n\n到貨：'+arrival:'')+(incLink?'\n\nShop: [link]':'');
+    hashEl.value=customTags||'#EndlessStories #日系穿搭 #選品 #女裝 #OOTD';
+  }
+}
+
+function copyCaption(){navigator.clipboard.writeText(document.getElementById('post-caption').value).then(()=>showToast('Caption copied'));}
+function copyHashtags(){navigator.clipboard.writeText(document.getElementById('post-hashtags').value).then(()=>showToast('Hashtags copied'));}
+
+async function postToMeta() {
+  const token=localStorage.getItem('meta_token');
+  const fbId=localStorage.getItem('fb_page_id');
+  const caption=document.getElementById('post-caption').value+'\n\n'+document.getElementById('post-hashtags').value;
+  const statusEl=document.getElementById('pub-status');
+  if(!token||!fbId){statusEl.className='pub-status err';statusEl.textContent='Missing API credentials — go to Settings';return;}
+  statusEl.className='pub-status';statusEl.textContent='Publishing...';statusEl.style.display='block';
+  try {
+    const res=await fetch(`https://graph.facebook.com/${fbId}/feed`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:caption,access_token:token})});
+    const data=await res.json();
+    if(data.id){statusEl.className='pub-status ok';statusEl.textContent='Published to Facebook successfully.';}
+    else{statusEl.className='pub-status err';statusEl.textContent='Error: '+(data.error?.message||'Check your API token');}
+  } catch(e){statusEl.className='pub-status err';statusEl.textContent='Network error — check settings';}
+}
+
+// ═══ ORDERS ═══
+async function loadOrders() {
+  try {
+    const data=await sbFetch('orders?order=created_at.desc');
+    renderOrders(data||[]);
+  } catch(e){renderOrders([]);}
+}
+
+function renderOrders(orders) {
+  const el=document.getElementById('orders-grid');
+  document.getElementById('orders-count').textContent=`(${orders.length})`;
+  if(!orders.length){el.innerHTML='<div style="padding:3rem;text-align:center;color:var(--mid);font-size:12px;letter-spacing:.05em">No orders yet.</div>';return;}
+  el.innerHTML=orders.map(o=>`
+    <div class="order-card">
+      <div class="order-hd">
+        <span class="order-no">${o.order_no}</span>
+        <span class="status-badge ${o.status==='待出貨'?'status-pending':o.status==='已出貨'?'status-shipped':'status-done'}">${o.status}</span>
+      </div>
+      <div class="order-name">${o.customer_name}</div>
+      <div class="order-meta">${o.phone}${o.email?' · '+o.email:''}<br>${o.address}<br>${o.shipping_method}</div>
+      <div class="order-items">${(o.items||[]).map(i=>`${i.name} (${i.size}) x${i.qty}`).join(', ')}</div>
+      <div class="order-total">NT$${(o.total||0).toLocaleString()}</div>
+      <div class="tracking-row">
+        <input type="text" placeholder="Tracking number" value="${o.tracking_no||''}" id="track-${o.id}"/>
+        <button class="btn btn-outline" onclick="updateTracking('${o.id}')" style="font-size:11px;padding:6px 10px;white-space:nowrap">Update & Notify</button>
+        <button class="btn btn-wine" onclick="markDone('${o.id}')" style="font-size:11px;padding:6px 10px;white-space:nowrap">Mark Done</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function updateTracking(id) {
+  const val=document.getElementById('track-'+id).value.trim();
+  if(!val){alert('Enter tracking number');return;}
+  try {
+    await sbFetch(`orders?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({tracking_no:val,status:'已出貨'})});
+    showToast('Tracking updated — status set to Shipped'); loadOrders();
+  } catch(e){showToast('Error updating tracking');}
+}
+
+async function markDone(id) {
+  try {
+    await sbFetch(`orders?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({status:'已完成'})});
+    showToast('Order marked as complete'); loadOrders();
+  } catch(e){showToast('Error updating order');}
+}
+
+async function exportToSheets() {
+  const sheetsUrl=localStorage.getItem('sheets_url');
+  const data=await sbFetch('orders?order=created_at.desc').catch(()=>[]);
+  if(!data||!data.length){showToast('No orders to export');return;}
+  if(sheetsUrl) {
+    await fetch(sheetsUrl,{method:'POST',mode:'no-cors',body:JSON.stringify(data)});
+    showToast('Sent to Google Sheets');
+  } else {
+    const csv=['Order No,Name,Phone,Email,Address,Items,Total,Shipping,Status,Tracking,Date',
+      ...data.map(o=>[o.order_no,o.customer_name,o.phone,o.email||'',o.address,
+        (o.items||[]).map(i=>`${i.name}(${i.size})x${i.qty}`).join(';'),
+        o.total,o.shipping_method,o.status,o.tracking_no||'',
+        new Date(o.created_at).toLocaleDateString('zh-TW')].join(','))].join('\n');
+    const blob=new Blob([csv],{type:'text/csv'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download=`ES_orders_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+    showToast('Orders exported as CSV');
+  }
+}
+
+// ═══ SETTINGS ═══
+function saveSettings() {
+  SB_URL=document.getElementById('sb-url').value.trim();
+  SB_KEY=document.getElementById('sb-key').value.trim();
+  localStorage.setItem('sb_url',SB_URL);
+  localStorage.setItem('sb_key',SB_KEY);
+  localStorage.setItem('meta_token',document.getElementById('meta-token').value.trim());
+  localStorage.setItem('fb_page_id',document.getElementById('fb-page-id').value.trim());
+  localStorage.setItem('ig_account_id',document.getElementById('ig-account-id').value.trim());
+  localStorage.setItem('sheets_url',document.getElementById('sheets-url').value.trim());
+  showToast('Settings saved');
+}
+
+// ═══ SHOP ═══
+function renderShop(cat) {
+  const pub=products.filter(p=>cat==='全部'||p.category===cat);
+  const catMap={'全部':'All Pieces','上裝':'Tops','下裝':'Bottoms','配飾':'Accessories','鞋子':'Shoes','包包':'Bags'};
+  document.getElementById('shop-cat-title').textContent=catMap[cat]||cat;
+  const newArr=cat==='全部'?products.slice(0,4):pub.slice(0,4);
+  const newSection=document.getElementById('new-arrivals-section');
+  const allSection=document.getElementById('all-products-section');
+  if(cat==='全部') { newSection.style.display=''; renderGrid('new-arrivals-grid',newArr); }
+  else { newSection.style.display='none'; }
+  renderGrid('shop-grid',pub);
+}
+
+function renderGrid(gridId, items) {
+  const grid=document.getElementById(gridId);
+  if(!items.length){grid.innerHTML=`<div class="empty-shop">Products coming soon.</div>`;return;}
+  grid.innerHTML=items.map(p=>`
+    <div class="shop-card" onclick="openShopProd('${p.id}')">
+      <div class="shop-card-img-wrap">
+        ${p.images&&p.images[0]?`<img src="${p.images[0]}" alt="${p.name}" loading="lazy">`:'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--mid);font-size:11px;letter-spacing:.05em">No image</div>'}
+      </div>
+      <div class="shop-card-cat">${p.category||''}</div>
+      <div class="shop-card-name">${p.name}</div>
+      <div class="shop-card-sub">${p.sub||''}</div>
+      <div class="shop-card-price">NT$${(p.price||0).toLocaleString()}</div>
+      <div class="shop-card-sizes">${(p.sizes||[]).map(s=>`<span class="size-dot">${s}</span>`).join('')}</div>
+      ${p.preorder?`<div class="shop-card-preorder">Pre-order · ${p.arrival_date||'7-14 days'}</div>`:''}
+    </div>
+  `).join('');
+}
+
+function shopFilter(cat,btn) {
+  document.querySelectorAll('.snav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderShop(cat);
+}
+
+function openShopProd(id) {
+  const p=products.find(x=>x.id===id); if(!p) return;
+  currentProd=p; currentQty=1; currentSize=null;
+  document.getElementById('modal-cat').textContent=p.category||'';
+  document.getElementById('modal-title').textContent=p.name;
+  document.getElementById('modal-price').textContent=`NT$${(p.price||0).toLocaleString()}`;
+  document.getElementById('modal-desc').textContent=p.description||'';
+  const preEl=document.getElementById('modal-preorder');
+  if(p.preorder){preEl.style.display='block';preEl.textContent=`Pre-order — estimated arrival: ${p.arrival_date||'7-14 days after order'}`;}
+  else{preEl.style.display='none';}
+  const imgEl=document.getElementById('modal-img-col');
+  imgEl.innerHTML=p.images&&p.images[0]?`<img src="${p.images[0]}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover">`:'';
+  document.getElementById('modal-size-opts').innerHTML=(p.sizes||[]).map(s=>`<button class="sopt" onclick="selSize(this,'${s}')">${s}</button>`).join('');
+  document.getElementById('modal-qty-n').textContent=1;
+  document.getElementById('prod-modal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function selSize(btn,s){document.querySelectorAll('.sopt').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');currentSize=s;}
+function chgQty(d){currentQty=Math.max(1,currentQty+d);document.getElementById('modal-qty-n').textContent=currentQty;}
+function closeProdModalOv(e){if(e.target===document.getElementById('prod-modal'))closeProdModal();}
+function closeProdModal(){document.getElementById('prod-modal').classList.remove('open');document.body.style.overflow='';}
+
+function addToCart(){
+  if(!currentSize&&(currentProd.sizes||[]).length>1){alert('Please select a size');return;}
+  const size=currentSize||(currentProd.sizes||['Free'])[0];
+  const ex=cart.find(c=>c.id===currentProd.id&&c.size===size);
+  if(ex) ex.qty+=currentQty; else cart.push({...currentProd,size,qty:currentQty});
+  updateCartCount(); closeProdModal(); openCart();
+}
+
+function updateCartCount(){document.getElementById('cart-n').textContent=cart.reduce((s,c)=>s+c.qty,0);}
+
+function openCart(){renderCartPanel();document.getElementById('cart-side').classList.add('open');document.getElementById('cart-ov-bg').classList.add('open');document.body.style.overflow='hidden';}
+function closeCart(){document.getElementById('cart-side').classList.remove('open');document.getElementById('cart-ov-bg').classList.remove('open');document.body.style.overflow='';}
+
+function renderCartPanel(){
+  const el=document.getElementById('cart-items-wrap');
+  if(!cart.length){el.innerHTML='<div class="cart-empty">Your bag is empty.</div>';document.getElementById('cart-subtotal').textContent='NT$0';return;}
+  el.innerHTML=cart.map((c,i)=>`
+    <div class="citem">
+      <div class="citem-img">${c.images&&c.images[0]?`<img src="${c.images[0]}" alt="${c.name}">`:'<div style="width:100%;height:100%;background:var(--gray)"></div>'}</div>
+      <div class="citem-info">
+        <div class="citem-name">${c.name}</div>
+        <div class="citem-meta">Size: ${c.size} · Qty: ${c.qty}</div>
+        <div class="citem-price">NT$${((c.price||0)*c.qty).toLocaleString()}</div>
+      </div>
+      <button class="citem-rm" onclick="removeCartItem(${i})">x</button>
+    </div>
+  `).join('');
+  document.getElementById('cart-subtotal').textContent=`NT$${cart.reduce((s,c)=>s+(c.price||0)*c.qty,0).toLocaleString()}`;
+}
+
+function removeCartItem(i){cart.splice(i,1);updateCartCount();renderCartPanel();}
+
+function goCheckout(){
+  if(!cart.length){alert('Your bag is empty');return;}
+  closeCart();
+  const sub=cart.reduce((s,c)=>s+(c.price||0)*c.qty,0);
+  document.getElementById('checkout-items-detail').innerHTML=cart.map(c=>`<div class="sum-row"><span>${c.name} x${c.qty} (${c.size})</span><span>NT$${((c.price||0)*c.qty).toLocaleString()}</span></div>`).join('')+`<div class="sum-row"><span>Shipping</span><span>NT$${shippingFee}</span></div>`;
+  document.getElementById('checkout-total-amt').textContent=`NT$${(sub+shippingFee).toLocaleString()}`;
+  document.getElementById('shop-main').style.display='none';
+  document.getElementById('checkout-wrap').classList.add('active');
+  document.getElementById('success-wrap').classList.remove('active');
+  window.scrollTo(0,0);
+}
+
+function selShip(el,fee){
+  document.querySelectorAll('.ship-opt').forEach(o=>o.classList.remove('sel'));
+  el.classList.add('sel'); shippingFee=fee;
+  const sub=cart.reduce((s,c)=>s+(c.price||0)*c.qty,0);
+  document.getElementById('checkout-total-amt').textContent=`NT$${(sub+shippingFee).toLocaleString()}`;
+}
+
+function showShopMain(){
+  document.getElementById('shop-main').style.display='';
+  document.getElementById('checkout-wrap').classList.remove('active');
+  document.getElementById('success-wrap').classList.remove('active');
+  window.scrollTo(0,0);
+}
+
+async function submitOrder(){
+  const name=document.getElementById('f-name').value.trim();
+  const phone=document.getElementById('f-phone').value.trim();
+  const address=document.getElementById('f-address').value.trim();
+  if(!name||!phone||!address){alert('Please fill in name, phone, and address');return;}
+  const orderId='ES'+Date.now().toString().slice(-8);
+  const total=cart.reduce((s,c)=>s+(c.price||0)*c.qty,0)+shippingFee;
+  const shippingName=document.querySelector('.ship-opt.sel .ship-name').textContent;
+  const orderData={order_no:orderId,customer_name:name,phone,email:document.getElementById('f-email').value.trim()||null,address,shipping_method:shippingName,shipping_fee:shippingFee,note:document.getElementById('f-note').value.trim()||null,items:JSON.parse(JSON.stringify(cart)),total,status:'待出貨'};
+  try {
+    await sbFetch('orders',{method:'POST',body:JSON.stringify(orderData)});
+  } catch(e){ console.warn('Could not save to Supabase',e); }
+  document.getElementById('succ-detail').innerHTML=`<div class="succ-detail-title">Order Details</div><div class="succ-row"><span>Order No.</span><span>${orderId}</span></div><div class="succ-row"><span>Name</span><span>${name}</span></div><div class="succ-row"><span>Phone</span><span>${phone}</span></div><div class="succ-row"><span>Address</span><span>${address}</span></div><div class="succ-row"><span>Shipping</span><span>${shippingName}</span></div><div class="succ-row" style="font-weight:500"><span>Total</span><span>NT$${total.toLocaleString()}</span></div>`;
+  cart=[]; updateCartCount();
+  document.getElementById('checkout-wrap').classList.remove('active');
+  document.getElementById('success-wrap').classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ═══ TOAST ═══
+function showToast(msg){
+  const t=document.getElementById('toast-el');
+  t.textContent=msg; t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)';
+  setTimeout(()=>{t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(60px)';},3000);
+}
+
+// ═══ INIT ═══
+window.addEventListener('load',()=>{
+  const su=localStorage.getItem('sb_url'); const sk=localStorage.getItem('sb_key');
+  const mt=localStorage.getItem('meta_token'); const fb=localStorage.getItem('fb_page_id');
+  const ig=localStorage.getItem('ig_account_id'); const sh=localStorage.getItem('sheets_url');
+  if(su){document.getElementById('sb-url').value=su; SB_URL=su;}
+  if(sk){document.getElementById('sb-key').value=sk; SB_KEY=sk;}
+  if(mt) document.getElementById('meta-token').value=mt;
+  if(fb) document.getElementById('fb-page-id').value=fb;
+  if(ig) document.getElementById('ig-account-id').value=ig;
+  if(sh) document.getElementById('sheets-url').value=sh;
+});
+</script>
+</body>
+</html>
