@@ -436,11 +436,11 @@ code{font-family:monospace;font-size:11px;background:var(--gray);padding:1px 5px
     <!-- SETTINGS -->
     <div id="atab-apiset" class="atab-content hidden">
       <div class="card">
-        <div class="card-title">Anthropic API</div>
+        <div class="card-title">OpenRouter API</div>
         <div class="fields-col">
           <div class="fgroup">
             <label class="field-label">API Key</label>
-            <div class="field-row"><input type="password" id="anthropic-key" placeholder="sk-ant-..."/><button class="btn btn-black" onclick="saveSettings()" style="padding:9px 14px;font-size:11px">Save</button></div>
+            <div class="field-row"><input type="password" id="or-key" placeholder="sk-or-..."/><button class="btn btn-black" onclick="saveSettings()" style="padding:9px 14px;font-size:11px">Save</button></div>
           </div>
         </div>
         <div class="notice" style="margin-top:10px">Your API key is stored only in this browser and never uploaded anywhere.</div>
@@ -601,8 +601,9 @@ code{font-family:monospace;font-size:11px;background:var(--gray);padding:1px 5px
 
 <script>
 // ═══ CONFIG ═══
-const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
-function getAnthropicKey() { return localStorage.getItem('anthropic_key') || ''; }
+const OR_API = 'https://openrouter.ai/api/v1/chat/completions';
+const OR_KEY = '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';
+function getAIKey() { return localStorage.getItem('or_key') || OR_KEY; }
 let SB_URL = 'https://owrklkuqsnmzkmnv.supabase.co';
 let SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93cmtsa3Vxc25temttbnZlcm5oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMjM3ODksImV4cCI6MjA5Njc5OTc4OX0.i07XDyluocMAOkiuOG3eb4K_ts-0dGhsDQrg5Sllozk';
 
@@ -680,6 +681,28 @@ function switchAtab(name, btn) {
   if(name==='orders') loadOrders();
 }
 
+// ═══ AI HELPER ═══
+async function callAI(prompt, maxTokens=1500) {
+  const key = getAIKey();
+  const res = await fetch(OR_API, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + key,
+      'HTTP-Referer': 'https://wangzheqi95-rgb.github.io/endless-stories',
+      'X-Title': 'Endless Stories'
+    },
+    body: JSON.stringify({
+      model: 'mistralai/mistral-7b-instruct:free',
+      messages: [{role: 'user', content: prompt}],
+      max_tokens: maxTokens
+    })
+  });
+  if(!res.ok) { const e=await res.text(); throw new Error('OpenRouter '+res.status+': '+e); }
+  const data = await res.json();
+  return data.choices[0].message.content;
+}
+
 // ═══ IMPORT ═══
 function addUrlRow() {
   const r=document.createElement('div'); r.className='url-row';
@@ -702,9 +725,8 @@ async function parseUrls() {
 URLs:\n${urls.join('\n')}
 Each object: {"name":"Product name (Traditional Chinese)","sub":"Subtitle (style note)","description":"50-char description (Traditional Chinese)","price":number,"category":"上裝 or 下裝 or 配飾 or 鞋子 or 包包","sizes":["S","M","L","XL"],"style_tags":["日系","簡約"],"preorder":true,"arrival_date":"7-14 days","stock_limit":10,"url":"original url"}
 Return ${urls.length} products.`;
-    const res=await fetch(ANTHROPIC_API,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':getAnthropicKey(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
-    const data=await res.json();
-    const parsed=JSON.parse(data.content[0].text.replace(/```json|```/g,'').trim());
+    const text = await callAI(prompt, 2000);
+    const parsed=JSON.parse(text.replace(/```json|```/g,'').trim());
     clearInterval(iv); fill.style.width='100%';
     // Save to Supabase
     for(const p of parsed) {
@@ -876,9 +898,7 @@ Reply in this exact format (no other text):
 ===HASHTAGS===
 (hashtags here, space-separated)`;
   try {
-    const res=await fetch(ANTHROPIC_API,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':getAnthropicKey(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:[{role:'user',content:prompt}]})});
-    const data=await res.json();
-    const text=data.content[0].text;
+    const text = await callAI(prompt, 800);
     const capMatch=text.match(/===CAPTION===([\s\S]*?)===HASHTAGS===/);
     const tagMatch=text.match(/===HASHTAGS===([\s\S]*)$/);
     captionEl.value=capMatch?capMatch[1].trim():text;
@@ -984,7 +1004,7 @@ function saveSettings() {
   localStorage.setItem('fb_page_id',document.getElementById('fb-page-id').value.trim());
   localStorage.setItem('ig_account_id',document.getElementById('ig-account-id').value.trim());
   localStorage.setItem('sheets_url',document.getElementById('sheets-url').value.trim());
-  localStorage.setItem('anthropic_key',document.getElementById('anthropic-key').value.trim());
+  localStorage.setItem('or_key',document.getElementById('or-key').value.trim());
   showToast('Settings saved');
 }
 
@@ -1143,8 +1163,8 @@ window.addEventListener('load',()=>{
   if(fb) document.getElementById('fb-page-id').value=fb;
   if(ig) document.getElementById('ig-account-id').value=ig;
   if(sh) document.getElementById('sheets-url').value=sh;
-  const ak=localStorage.getItem('anthropic_key');
-  if(ak) document.getElementById('anthropic-key').value=ak;
+  const ak=localStorage.getItem('or_key');
+  if(ak) document.getElementById('or-key').value=ak;
 });
 </script>
 </body>
