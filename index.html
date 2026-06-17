@@ -302,22 +302,61 @@ code{font-family:monospace;font-size:11px;background:var(--gray);padding:1px 5px
     <!-- IMPORT -->
     <div id="atab-import" class="atab-content">
       <div class="card">
-        <div class="card-title">Import Products</div>
-        <div class="fgroup">
-          <label class="field-label">Taobao URLs</label>
-          <div class="url-list" id="url-list">
-            <div class="url-row"><input type="text" placeholder="https://item.taobao.com/item.htm?id=..."/><button class="icon-btn" onclick="delUrl(this)">x</button></div>
-            <div class="url-row"><input type="text" placeholder="https://item.taobao.com/item.htm?id=..."/><button class="icon-btn" onclick="delUrl(this)">x</button></div>
+        <div class="card-title">Add New Product</div>
+        <div class="frow2">
+          <div class="fgroup">
+            <label class="field-label">Product Name *</label>
+            <input type="text" id="add-name" placeholder="e.g. 日系寬鬆棉麻長裙"/>
           </div>
-          <button class="add-row-btn" onclick="addUrlRow()">+ Add Row</button>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-black btn-block" id="parse-btn" onclick="parseUrls()" style="flex:2">AI Parse Products</button>
-            <button class="btn btn-outline" onclick="addManual()" style="flex:1">+ Manual Add</button>
+          <div class="fgroup">
+            <label class="field-label">Subtitle</label>
+            <input type="text" id="add-sub" placeholder="e.g. 復古碎花 · 春夏款"/>
           </div>
-          <div class="progress-bar" id="loading-bar"><div class="progress-fill" id="loading-fill"></div></div>
         </div>
+        <div class="frow3">
+          <div class="fgroup">
+            <label class="field-label">Price (NT$) *</label>
+            <input type="number" id="add-price" placeholder="580"/>
+          </div>
+          <div class="fgroup">
+            <label class="field-label">Category *</label>
+            <select id="add-cat">
+              <option value="上裝">上裝 Tops</option>
+              <option value="下裝">下裝 Bottoms</option>
+              <option value="配飾">配飾 Accessories</option>
+              <option value="鞋子">鞋子 Shoes</option>
+              <option value="包包">包包 Bags</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label class="field-label">Arrival Date</label>
+            <input type="text" id="add-arrival" placeholder="e.g. 7-14 天到貨"/>
+          </div>
+        </div>
+        <div class="fgroup">
+          <label class="field-label">Sizes (comma separated)</label>
+          <input type="text" id="add-sizes" placeholder="S, M, L, XL"/>
+        </div>
+        <div class="fgroup">
+          <label class="field-label">Description</label>
+          <textarea id="add-desc" rows="2" placeholder="商品描述..."></textarea>
+        </div>
+        <div class="fgroup">
+          <label class="field-label">Image URL (paste from Taobao)</label>
+          <input type="text" id="add-img" placeholder="https://..."/>
+          <div id="add-img-preview" style="margin-top:8px;display:none"><img id="add-img-thumb" style="width:120px;height:150px;object-fit:cover;border-radius:4px;border:1px solid var(--border)"/></div>
+        </div>
+        <div class="fgroup">
+          <label class="field-label">Style Tags (comma separated)</label>
+          <input type="text" id="add-tags" placeholder="日系, 簡約, 復古"/>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn btn-black btn-block" onclick="submitAddProduct()" style="flex:2">Save & Add to Products</button>
+          <button class="btn btn-outline" onclick="clearAddForm()" style="flex:1">Clear</button>
+        </div>
+        <div id="add-status" style="display:none;margin-top:10px;padding:10px 14px;border-radius:4px;font-size:12px"></div>
       </div>
-      <div class="notice">AI will infer product details from the URL ID. After parsing, review and edit in the Products tab before publishing.</div>
+      <div class="notice">Paste image URL from Taobao (right-click image → Copy Image Address). Send Taobao links to Claude in chat and Claude will prepare the product details for you to paste here.</div>
     </div>
 
     <!-- MANAGE -->
@@ -679,6 +718,66 @@ function switchAtab(name, btn) {
   if(name==='manage') loadProducts().then(()=>renderManageGrid());
   if(name==='post') loadProducts().then(()=>renderPostPicker());
   if(name==='orders') loadOrders();
+}
+
+// ═══ ADD PRODUCT FORM ═══
+document.addEventListener('DOMContentLoaded', () => {
+  const imgInput = document.getElementById('add-img');
+  if(imgInput) {
+    imgInput.addEventListener('input', () => {
+      const url = imgInput.value.trim();
+      const preview = document.getElementById('add-img-preview');
+      const thumb = document.getElementById('add-img-thumb');
+      if(url) { thumb.src = url; preview.style.display = 'block'; }
+      else { preview.style.display = 'none'; }
+    });
+  }
+});
+
+async function submitAddProduct() {
+  const name = document.getElementById('add-name').value.trim();
+  const price = parseInt(document.getElementById('add-price').value) || 0;
+  if(!name || !price) { showAddStatus('Please enter at least a name and price.', false); return; }
+  const p = {
+    name,
+    sub: document.getElementById('add-sub').value.trim(),
+    description: document.getElementById('add-desc').value.trim(),
+    price,
+    category: document.getElementById('add-cat').value,
+    sizes: document.getElementById('add-sizes').value.split(',').map(s=>s.trim()).filter(Boolean),
+    images: document.getElementById('add-img').value.trim() ? [document.getElementById('add-img').value.trim()] : [],
+    style_tags: document.getElementById('add-tags').value.split(',').map(s=>s.trim()).filter(Boolean),
+    arrival_date: document.getElementById('add-arrival').value.trim(),
+    stock_limit: 10,
+    published: false,
+    preorder: true
+  };
+  try {
+    await sbFetch('products', {method:'POST', body:JSON.stringify(p)});
+    showAddStatus('Product saved successfully! Go to PRODUCTS tab to publish.', true);
+    clearAddForm();
+  } catch(e) {
+    showAddStatus('Could not save to Supabase — check Settings.', false);
+  }
+}
+
+function showAddStatus(msg, ok) {
+  const el = document.getElementById('add-status');
+  el.style.display = 'block';
+  el.style.background = ok ? '#f0f7f0' : '#fdf2f0';
+  el.style.color = ok ? '#2a6b2a' : '#6B1A2A';
+  el.style.border = ok ? '1px solid #b8dab8' : '1px solid #e8c0c0';
+  el.textContent = msg;
+}
+
+function clearAddForm() {
+  ['add-name','add-sub','add-price','add-desc','add-img','add-tags','add-arrival','add-sizes'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  document.getElementById('add-cat').value = '上裝';
+  document.getElementById('add-img-preview').style.display = 'none';
+  document.getElementById('add-status').style.display = 'none';
 }
 
 // ═══ AI HELPER ═══
