@@ -71,8 +71,7 @@ input,textarea,select{font-family:var(--sans)}
 .policy-box{background:var(--gray);border-radius:4px;padding:20px 24px;font-size:13px;line-height:2;color:var(--dark-mid)}
 
 /* ── PRODUCT DETAIL PAGE ── */
-.detail-wrap{display:none;max-width:1100px;margin:0 auto;padding:40px 28px}
-.detail-wrap.active{display:grid;grid-template-columns:1fr 1fr;gap:48px}
+.detail-wrap{max-width:1100px;margin:0 auto;padding:40px 28px;display:grid;grid-template-columns:1fr 1fr;gap:48px}
 .detail-imgs{position:sticky;top:112px;align-self:start}
 .detail-main-img{width:100%;aspect-ratio:3/4;background:var(--gray);overflow:hidden;margin-bottom:10px}
 .detail-main-img img{width:100%;height:100%;object-fit:cover}
@@ -305,7 +304,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
   </div>
 
   <!-- ABOUT PAGE -->
-  <div id="page-about" class="hidden">
+  <div id="page-about" style="display:none">
     <div class="about-wrap">
       <div class="about-title">About Us</div>
       <div class="about-line"></div>
@@ -319,7 +318,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
   </div>
 
   <!-- PRODUCT DETAIL -->
-  <div id="page-detail" class="hidden">
+  <div id="page-detail" style="display:none">
     <div class="detail-wrap" id="detail-wrap">
       <div class="detail-imgs">
         <div class="detail-main-img"><img id="detail-main-img" src="" alt=""/></div>
@@ -346,7 +345,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
   </div>
 
   <!-- CHECKOUT -->
-  <div class="checkout-wrap" id="checkout-wrap">
+  <div class="checkout-wrap" id="checkout-wrap" style="display:none">
     <button class="back-link" onclick="showPage('shop')">← Continue Shopping</button>
     <div class="checkout-title">Checkout</div>
     <div class="checkout-sub">Cash on Delivery</div>
@@ -375,7 +374,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
   </div>
 
   <!-- SUCCESS -->
-  <div class="success-wrap" id="success-wrap">
+  <div class="success-wrap" id="success-wrap" style="display:none">
     <div class="succ-line"></div>
     <div class="succ-title">Order Confirmed</div>
     <div class="succ-desc">感謝您的訂購！我們將於 7-14 個工作天內出貨，並主動與您聯繫。</div>
@@ -615,6 +614,12 @@ function initMode() {
     loadCategories().then(()=>{ renderCatSelect(); });
   }
   if(!isAdmin) {
+    // Show shop by default, hide others
+    document.getElementById('page-shop').style.display = 'block';
+    document.getElementById('page-about').style.display = 'none';
+    document.getElementById('page-detail').style.display = 'none';
+    document.getElementById('checkout-wrap').style.display = 'none';
+    document.getElementById('success-wrap').style.display = 'none';
     loadCategories().then(() => {
       renderShopNav();
       return loadPublishedProducts();
@@ -696,12 +701,20 @@ function showAbout() {
 
 // ═══ SHOP ═══
 function showPage(page) {
-  ['page-shop','page-about','page-detail','checkout-wrap','success-wrap'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) { el.classList.add('hidden'); el.classList.remove('active'); }
-  });
-  const target = document.getElementById('page-'+page) || document.getElementById(page+'-wrap');
-  if(target) { target.classList.remove('hidden'); target.classList.add('active'); }
+  // Hide all pages
+  document.getElementById('page-shop').style.display = 'none';
+  document.getElementById('page-about').style.display = 'none';
+  document.getElementById('page-detail').style.display = 'none';
+  document.getElementById('checkout-wrap').style.display = 'none';
+  document.getElementById('success-wrap').style.display = 'none';
+
+  // Show target
+  if(page === 'shop') document.getElementById('page-shop').style.display = 'block';
+  else if(page === 'about') document.getElementById('page-about').style.display = 'block';
+  else if(page === 'detail') document.getElementById('page-detail').style.display = 'block';
+  else if(page === 'checkout') document.getElementById('checkout-wrap').style.display = 'block';
+  else if(page === 'success') document.getElementById('success-wrap').style.display = 'block';
+
   window.scrollTo(0,0);
 }
 
@@ -805,10 +818,7 @@ function goCheckout(){
   const sub=cart.reduce((s,c)=>s+(c.price||0)*c.qty,0);
   document.getElementById('checkout-items-detail').innerHTML=cart.map(c=>`<div class="sum-row"><span>${c.name} x${c.qty} (${c.size})</span><span>NT$${((c.price||0)*c.qty).toLocaleString()}</span></div>`).join('')+`<div class="sum-row"><span>Shipping</span><span>NT$${shippingFee}</span></div>`;
   document.getElementById('checkout-total-amt').textContent=`NT$${(sub+shippingFee).toLocaleString()}`;
-  ['page-shop','page-about','page-detail'].forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
-  document.getElementById('checkout-wrap').classList.add('active');
-  document.getElementById('checkout-wrap').style.display='block';
-  document.getElementById('success-wrap').classList.remove('active');
+  showPage('checkout');
   window.scrollTo(0,0);
 }
 
@@ -831,10 +841,7 @@ async function submitOrder(){
   try { await sbFetch('orders',{method:'POST',body:JSON.stringify(orderData)}); } catch(e){ console.warn('Order save failed',e); }
   document.getElementById('succ-detail').innerHTML=`<div style="font-size:10px;color:var(--mid);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">Order Details</div><div class="succ-row"><span>Order No.</span><span>${orderId}</span></div><div class="succ-row"><span>Name</span><span>${name}</span></div><div class="succ-row"><span>Phone</span><span>${phone}</span></div><div class="succ-row"><span>Address</span><span>${address}</span></div><div class="succ-row"><span>Shipping</span><span>${shippingName}</span></div><div class="succ-row" style="font-weight:500"><span>Total</span><span>NT$${total.toLocaleString()}</span></div>`;
   cart=[]; updateCartCount();
-  document.getElementById('checkout-wrap').classList.remove('active');
-  document.getElementById('checkout-wrap').style.display='none';
-  document.getElementById('success-wrap').classList.add('active');
-  document.getElementById('success-wrap').style.display='block';
+  showPage('success');
   window.scrollTo(0,0);
 }
 
