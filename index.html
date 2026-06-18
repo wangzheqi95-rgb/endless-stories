@@ -362,12 +362,13 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
     </div>
     <div class="fgroup"><label class="field-label">Delivery Address *</label><input type="text" id="f-address" placeholder="縣市 鄉鎮市區 街道門號"/></div>
     <div class="fgroup"><label class="field-label">Notes</label><textarea id="f-note" rows="2" placeholder="備註..."></textarea></div>
+    <div class="fgroup" id="cvs-field" style="display:none"><label class="field-label">超商門市地址 *</label><input type="text" id="f-cvs" placeholder="例：7-11 台北忠孝門市，台北市大安區忠孝東路四段123號"/></div>
     <div class="fgroup">
       <label class="field-label">Shipping Method</label>
       <div class="ship-opts">
-        <label class="ship-opt sel" onclick="selShip(this,80)"><input type="radio" name="ship" checked/><div style="flex:1"><div class="ship-name">中華郵政（貨到付款）</div><div class="ship-desc">3-5 個工作天</div></div><div class="ship-fee">NT$80</div></label>
-        <label class="ship-opt" onclick="selShip(this,100)"><input type="radio" name="ship"/><div style="flex:1"><div class="ship-name">宅配通（貨到付款）</div><div class="ship-desc">2-3 個工作天，可指定時段</div></div><div class="ship-fee">NT$100</div></label>
-        <label class="ship-opt" onclick="selShip(this,60)"><input type="radio" name="ship"/><div style="flex:1"><div class="ship-name">超商取貨付款</div><div class="ship-desc">7-11 / 全家，2-4 個工作天</div></div><div class="ship-fee">NT$60</div></label>
+        <label class="ship-opt sel" onclick="selShip(this,80,'post')"><input type="radio" name="ship" checked/><div style="flex:1"><div class="ship-name">中華郵政（貨到付款）</div><div class="ship-desc">3-5 個工作天</div></div><div class="ship-fee">NT$80</div></label>
+        <label class="ship-opt" onclick="selShip(this,100,'cat')"><input type="radio" name="ship"/><div style="flex:1"><div class="ship-name">黑貓宅急便（貨到付款）</div><div class="ship-desc">1-3 個工作天，可指定時段</div></div><div class="ship-fee">NT$100</div></label>
+        <label class="ship-opt" onclick="selShip(this,60,'cvs')"><input type="radio" name="ship"/><div style="flex:1"><div class="ship-name">超商取貨付款</div><div class="ship-desc">7-11 / 全家，2-4 個工作天</div></div><div class="ship-fee">NT$60</div></label>
       </div>
     </div>
     <button class="submit-btn" onclick="submitOrder()">Confirm Order</button>
@@ -534,6 +535,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase">Orders <span id="orders-count" style="font-weight:400;color:var(--mid)"></span></div>
       <div style="display:flex;gap:6px">
+        <button class="btn btn-outline" id="archive-toggle-btn" onclick="toggleArchived()" style="font-size:10px;padding:6px 12px">Show Archived</button>
         <button class="btn btn-outline" onclick="exportCSV()" style="font-size:10px;padding:6px 12px">Export CSV</button>
         <button class="btn btn-outline" onclick="loadOrders()" style="font-size:10px;padding:6px 12px">Refresh</button>
       </div>
@@ -577,6 +579,37 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
         <div class="fgroup"><label class="field-label">Instagram Business Account ID</label><div class="field-row"><input type="text" id="ig-account-id" placeholder="17841400000000000"/><button class="btn btn-black" onclick="saveSettings()" style="padding:8px 14px;font-size:10px">Save</button></div></div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div id="edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;overflow-y:auto;padding:20px">
+  <div style="background:#fff;max-width:680px;margin:0 auto;border-radius:6px;padding:28px;position:relative">
+    <button onclick="closeEditModal()" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:18px;color:var(--mid);cursor:pointer">x</button>
+    <div style="font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;margin-bottom:20px">Edit Product</div>
+    <input type="hidden" id="edit-id"/>
+    <div class="frow2" style="margin-bottom:12px">
+      <div class="fgroup"><label class="field-label">Product Name *</label><input type="text" id="edit-name"/></div>
+      <div class="fgroup"><label class="field-label">Subtitle</label><input type="text" id="edit-sub"/></div>
+    </div>
+    <div class="frow3" style="margin-bottom:12px">
+      <div class="fgroup"><label class="field-label">Price (NT$) *</label><input type="number" id="edit-price"/></div>
+      <div class="fgroup"><label class="field-label">Category</label><select id="edit-cat"></select></div>
+      <div class="fgroup"><label class="field-label">Arrival Date</label><input type="text" id="edit-arrival"/></div>
+    </div>
+    <div class="fgroup" style="margin-bottom:12px"><label class="field-label">Sizes (comma separated)</label><input type="text" id="edit-sizes"/></div>
+    <div class="fgroup" style="margin-bottom:12px"><label class="field-label">Description</label><textarea id="edit-desc" rows="2"></textarea></div>
+    <div class="fgroup" style="margin-bottom:12px">
+      <label class="field-label">Image URLs (one per line)</label>
+      <textarea id="edit-imgs" rows="4"></textarea>
+    </div>
+    <div id="edit-img-previews" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
+    <div class="fgroup" style="margin-bottom:16px"><label class="field-label">Style Tags (comma separated)</label><input type="text" id="edit-tags"/></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-black btn-block" onclick="saveEditProduct()" style="flex:2">Save Changes</button>
+      <button class="btn btn-outline" onclick="closeEditModal()" style="flex:1">Cancel</button>
+    </div>
+    <div id="edit-status" style="display:none;margin-top:10px;padding:10px 14px;border-radius:3px;font-size:12px"></div>
   </div>
 </div>
 
@@ -822,22 +855,27 @@ function goCheckout(){
   window.scrollTo(0,0);
 }
 
-function selShip(el,fee){
+function selShip(el,fee,type){
   document.querySelectorAll('.ship-opt').forEach(o=>o.classList.remove('sel'));
   el.classList.add('sel'); shippingFee=fee;
   const sub=cart.reduce((s,c)=>s+(c.price||0)*c.qty,0);
   document.getElementById('checkout-total-amt').textContent=`NT$${(sub+shippingFee).toLocaleString()}`;
+  document.getElementById('cvs-field').style.display = type==='cvs' ? 'block' : 'none';
 }
 
 async function submitOrder(){
   const name=document.getElementById('f-name').value.trim();
   const phone=document.getElementById('f-phone').value.trim();
   const address=document.getElementById('f-address').value.trim();
+  const shippingType = document.querySelector('.ship-opt.sel input').closest('.ship-opt').getAttribute('onclick');
+  const isCvs = shippingType && shippingType.includes('cvs');
+  const cvsStore = document.getElementById('f-cvs').value.trim();
   if(!name||!phone||!address){ alert('Please fill in name, phone and address'); return; }
+  if(isCvs && !cvsStore){ alert('請填寫超商門市地址'); return; }
   const orderId='ES'+Date.now().toString().slice(-8);
   const total=cart.reduce((s,c)=>s+(c.price||0)*c.qty,0)+shippingFee;
   const shippingName=document.querySelector('.ship-opt.sel .ship-name').textContent;
-  const orderData={order_no:orderId,customer_name:name,phone,email:document.getElementById('f-email').value.trim()||null,address,shipping_method:shippingName,shipping_fee:shippingFee,note:document.getElementById('f-note').value.trim()||null,items:JSON.parse(JSON.stringify(cart)),total,status:'待出貨'};
+  const orderData={order_no:orderId,customer_name:name,phone,email:document.getElementById('f-email').value.trim()||null,address,shipping_method:shippingName,shipping_fee:shippingFee,note:(document.getElementById('f-note').value.trim() + (document.getElementById('f-cvs').value.trim() ? ' [超商門市：'+document.getElementById('f-cvs').value.trim()+']' : ''))||null,items:JSON.parse(JSON.stringify(cart)),total,status:'待出貨'};
   try { await sbFetch('orders',{method:'POST',body:JSON.stringify(orderData)}); } catch(e){ console.warn('Order save failed',e); }
   document.getElementById('succ-detail').innerHTML=`<div style="font-size:10px;color:var(--mid);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">Order Details</div><div class="succ-row"><span>Order No.</span><span>${orderId}</span></div><div class="succ-row"><span>Name</span><span>${name}</span></div><div class="succ-row"><span>Phone</span><span>${phone}</span></div><div class="succ-row"><span>Address</span><span>${address}</span></div><div class="succ-row"><span>Shipping</span><span>${shippingName}</span></div><div class="succ-row" style="font-weight:500"><span>Total</span><span>NT$${total.toLocaleString()}</span></div>`;
   cart=[]; updateCartCount();
@@ -916,7 +954,8 @@ function renderManageGrid(){
         <div class="pm-card-sizes">${(p.sizes||[]).map(s=>`<span class="size-dot">${s}</span>`).join('')}</div>
         <div class="pm-card-actions">
           <button class="pm-btn ${p.published?'unpublish':'publish'}" onclick="togglePublish('${p.id}',${p.published})">${p.published?'Unpublish':'Publish'}</button>
-          <button class="pm-btn" onclick="deleteProduct('${p.id}')">Delete</button>
+          <button class="pm-btn" onclick="openEditModal('${p.id}')">Edit</button>
+          <button class="pm-btn" onclick="deleteProduct('${p.id}')">Del</button>
         </div>
       </div>
     </div>
@@ -1014,6 +1053,8 @@ async function postToMeta(){
 }
 
 // ORDERS
+let showArchived = false;
+
 async function loadOrders(){
   try {
     const data=await sbFetch('orders?order=created_at.desc');
@@ -1023,22 +1064,29 @@ async function loadOrders(){
 
 function renderOrders(orders){
   const el=document.getElementById('orders-list');
-  document.getElementById('orders-count').textContent=`(${orders.length})`;
-  if(!orders.length){ el.innerHTML='<div style="padding:3rem;text-align:center;color:var(--mid);font-size:12px">No orders yet.</div>'; return; }
-  el.innerHTML=orders.map(o=>`
-    <div class="order-card">
+  const filtered = showArchived ? orders : orders.filter(o=>o.status!=='已完成');
+  document.getElementById('orders-count').textContent=`(${filtered.length}${showArchived?'':' active'})`;
+  if(!filtered.length){ el.innerHTML=`<div style="padding:3rem;text-align:center;color:var(--mid);font-size:12px">${showArchived?'No orders.':'No active orders. Click "Show Archived" to see completed orders.'}</div>`; return; }
+  el.innerHTML=filtered.map(o=>`
+    <div class="order-card" style="${o.status==='已完成'?'opacity:.6':''}">
       <div class="order-hd"><span class="order-no">${o.order_no}</span><span class="status-badge ${o.status==='待出貨'?'s-pending':o.status==='已出貨'?'s-shipped':'s-done'}">${o.status}</span></div>
       <div class="order-name">${o.customer_name}</div>
-      <div class="order-meta">${o.phone}${o.email?' · '+o.email:''}<br>${o.address}<br>${o.shipping_method}</div>
+      <div class="order-meta">${o.phone}${o.email?' · '+o.email:''}<br>${o.address}<br>${o.shipping_method}${o.note?'<br>備註：'+o.note:''}</div>
       <div class="order-items">${(o.items||[]).map(i=>`${i.name}(${i.size})x${i.qty}`).join(', ')}</div>
       <div class="order-total">NT$${(o.total||0).toLocaleString()}</div>
-      <div class="tracking-row">
+      ${o.status!=='已完成'?`<div class="tracking-row">
         <input type="text" placeholder="Tracking number" value="${o.tracking_no||''}" id="track-${o.id}"/>
         <button class="btn btn-outline" onclick="updateTracking('${o.id}')" style="font-size:10px;padding:5px 10px;white-space:nowrap">Update</button>
         <button class="btn btn-wine" onclick="markDone('${o.id}')" style="font-size:10px;padding:5px 10px;white-space:nowrap">Done</button>
-      </div>
+      </div>`:''}
     </div>
   `).join('');
+}
+
+function toggleArchived(){
+  showArchived = !showArchived;
+  document.getElementById('archive-toggle-btn').textContent = showArchived ? 'Hide Archived' : 'Show Archived';
+  loadOrders();
 }
 
 async function updateTracking(id){
@@ -1081,6 +1129,74 @@ function saveSettings(){
 function loadSettings(){
   const fields=[['sb-url','sb_url'],['sb-key','sb_key'],['or-key','or_key'],['meta-token','meta_token'],['fb-page-id','fb_page_id'],['ig-account-id','ig_account_id']];
   fields.forEach(([elId,key])=>{ const el=document.getElementById(elId); const val=localStorage.getItem(key); if(el&&val) el.value=val; });
+}
+
+// EDIT MODAL
+function openEditModal(id) {
+  const p = products.find(x=>x.id===id); if(!p) return;
+  document.getElementById('edit-id').value = p.id;
+  document.getElementById('edit-name').value = p.name||'';
+  document.getElementById('edit-sub').value = p.sub||'';
+  document.getElementById('edit-price').value = p.price||'';
+  document.getElementById('edit-arrival').value = p.arrival_date||'';
+  document.getElementById('edit-sizes').value = (p.sizes||[]).join(', ');
+  document.getElementById('edit-desc').value = p.description||'';
+  document.getElementById('edit-imgs').value = (p.images||[]).join('
+');
+  document.getElementById('edit-tags').value = (p.style_tags||[]).join(', ');
+  // Populate category select
+  const catSel = document.getElementById('edit-cat');
+  catSel.innerHTML = categories.map(c=>`<option value="${c.name}" ${c.name===p.category?'selected':''}>${c.name}</option>`).join('');
+  // Image previews
+  updateEditPreviews();
+  document.getElementById('edit-imgs').addEventListener('input', updateEditPreviews);
+  document.getElementById('edit-status').style.display='none';
+  document.getElementById('edit-modal').style.display='block';
+  document.body.style.overflow='hidden';
+}
+
+function updateEditPreviews() {
+  const urls = document.getElementById('edit-imgs').value.split('
+').map(s=>s.trim()).filter(Boolean);
+  const el = document.getElementById('edit-img-previews');
+  el.innerHTML = urls.map(url=>`<img src="${url}" style="width:80px;height:100px;object-fit:cover;border-radius:3px;border:1px solid var(--border)" onerror="this.style.display='none'">`).join('');
+  el.style.display = urls.length ? 'flex' : 'none';
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').style.display='none';
+  document.body.style.overflow='';
+}
+
+async function saveEditProduct() {
+  const id = document.getElementById('edit-id').value;
+  const name = document.getElementById('edit-name').value.trim();
+  const price = parseInt(document.getElementById('edit-price').value)||0;
+  if(!name||!price){ 
+    const el=document.getElementById('edit-status');
+    el.style.display='block'; el.className='add-status err'; el.textContent='Please enter name and price.';
+    return; 
+  }
+  const imgs = document.getElementById('edit-imgs').value.split('
+').map(s=>s.trim()).filter(Boolean);
+  const updates = {
+    name, sub: document.getElementById('edit-sub').value.trim(),
+    price, category: document.getElementById('edit-cat').value,
+    arrival_date: document.getElementById('edit-arrival').value.trim(),
+    sizes: document.getElementById('edit-sizes').value.split(',').map(s=>s.trim()).filter(Boolean),
+    description: document.getElementById('edit-desc').value.trim(),
+    images: imgs,
+    style_tags: document.getElementById('edit-tags').value.split(',').map(s=>s.trim()).filter(Boolean),
+    updated_at: new Date().toISOString()
+  };
+  try {
+    await sbFetch(`products?id=eq.${id}`, {method:'PATCH', body:JSON.stringify(updates)});
+    await loadAllProducts(); renderManageGrid();
+    closeEditModal(); showToast('Product updated');
+  } catch(e) {
+    const el=document.getElementById('edit-status');
+    el.style.display='block'; el.className='add-status err'; el.textContent='Error saving — check Supabase settings.';
+  }
 }
 
 // CATEGORY ADMIN
