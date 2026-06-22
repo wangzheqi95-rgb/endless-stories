@@ -1141,8 +1141,7 @@ function openEditModal(id) {
   document.getElementById('edit-arrival').value = p.arrival_date||'';
   document.getElementById('edit-sizes').value = (p.sizes||[]).join(', ');
   document.getElementById('edit-desc').value = p.description||'';
-  document.getElementById('edit-imgs').value = (p.images||[]).join('
-');
+  document.getElementById('edit-imgs').value = (p.images||[]).join('\n');
   document.getElementById('edit-tags').value = (p.style_tags||[]).join(', ');
   // Populate category select
   const catSel = document.getElementById('edit-cat');
