@@ -1155,8 +1155,7 @@ function openEditModal(id) {
 }
 
 function updateEditPreviews() {
-  const urls = document.getElementById('edit-imgs').value.split('
-').map(s=>s.trim()).filter(Boolean);
+  const urls = document.getElementById('edit-imgs').value.split('\n').map(s=>s.trim()).filter(Boolean);
   const el = document.getElementById('edit-img-previews');
   el.innerHTML = urls.map(url=>`<img src="${url}" style="width:80px;height:100px;object-fit:cover;border-radius:3px;border:1px solid var(--border)" onerror="this.style.display='none'">`).join('');
   el.style.display = urls.length ? 'flex' : 'none';
@@ -1176,8 +1175,7 @@ async function saveEditProduct() {
     el.style.display='block'; el.className='add-status err'; el.textContent='Please enter name and price.';
     return; 
   }
-  const imgs = document.getElementById('edit-imgs').value.split('
-').map(s=>s.trim()).filter(Boolean);
+  const imgs = document.getElementById('edit-imgs').value.split('\n').map(s=>s.trim()).filter(Boolean);
   const updates = {
     name, sub: document.getElementById('edit-sub').value.trim(),
     price, category: document.getElementById('edit-cat').value,
