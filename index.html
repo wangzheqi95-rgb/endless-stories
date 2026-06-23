@@ -240,6 +240,19 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
 .action-row{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
 .section-label{font-size:10px;color:var(--mid);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;margin-top:10px}
 
+/* ── UPLOAD ZONE ── */
+.upload-zone{border:2px dashed var(--border);border-radius:4px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;background:#fff;position:relative;margin-bottom:8px}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--black);background:var(--gray)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-zone-text{font-size:12px;color:var(--mid);letter-spacing:.05em;pointer-events:none}
+.upload-zone-text strong{display:block;font-size:13px;color:var(--black);margin-bottom:4px}
+.upload-progress{height:2px;background:var(--border);border-radius:1px;margin-top:8px;overflow:hidden;display:none}
+.upload-progress-fill{height:100%;width:0;background:var(--black);transition:width .3s}
+.img-preview-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.img-preview-item{position:relative;width:80px;height:100px}
+.img-preview-item img{width:100%;height:100%;object-fit:cover;border-radius:3px;border:1px solid var(--border)}
+.img-preview-item .remove-img{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--black);color:#fff;border:none;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+
 /* ── MODAL ── */
 #toast-el{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--black);color:#fff;padding:10px 20px;border-radius:2px;font-size:11px;letter-spacing:.08em;opacity:0;transition:all .3s;pointer-events:none;z-index:9999;white-space:nowrap}
 
@@ -437,10 +450,16 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
       <div class="fgroup"><label class="field-label">Sizes (comma separated)</label><input type="text" id="add-sizes" placeholder="S, M, L, XL"/></div>
       <div class="fgroup"><label class="field-label">Description</label><textarea id="add-desc" rows="2" placeholder="商品描述..."></textarea></div>
       <div class="fgroup">
-        <label class="field-label">Image URLs (one per line, first = main image)</label>
-        <textarea id="add-imgs" rows="4" placeholder="https://img.alicdn.com/...&#10;https://img.alicdn.com/...&#10;https://img.alicdn.com/..."></textarea>
+        <label class="field-label">Product Images</label>
+        <div class="upload-zone" id="add-upload-zone" ondragover="handleDragOver(event,'add')" ondragleave="handleDragLeave(event,'add')" ondrop="handleDrop(event,'add')">
+          <input type="file" id="add-file-input" accept="image/jpeg,image/png,image/webp" multiple onchange="handleFileSelect(event,'add')"/>
+          <div class="upload-zone-text"><strong>拖拽圖片至此或點擊上傳</strong>支援 JPG、PNG、WebP，可多選</div>
+          <div class="upload-progress" id="add-upload-progress"><div class="upload-progress-fill" id="add-upload-fill"></div></div>
+        </div>
+        <div class="img-preview-grid" id="add-img-previews"></div>
+        <label class="field-label" style="margin-top:4px">或貼入圖片網址（一行一個）</label>
+        <textarea id="add-imgs" rows="2" placeholder="https://img.alicdn.com/..."></textarea>
       </div>
-      <div id="add-img-previews" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
       <div class="fgroup"><label class="field-label">Style Tags (comma separated)</label><input type="text" id="add-tags" placeholder="日系, 簡約, 復古"/></div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-black btn-block" onclick="submitAddProduct()" style="flex:2">Save Product</button>
@@ -600,10 +619,16 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
     <div class="fgroup" style="margin-bottom:12px"><label class="field-label">Sizes (comma separated)</label><input type="text" id="edit-sizes"/></div>
     <div class="fgroup" style="margin-bottom:12px"><label class="field-label">Description</label><textarea id="edit-desc" rows="2"></textarea></div>
     <div class="fgroup" style="margin-bottom:12px">
-      <label class="field-label">Image URLs (one per line)</label>
-      <textarea id="edit-imgs" rows="4"></textarea>
+      <label class="field-label">Product Images</label>
+      <div class="upload-zone" id="edit-upload-zone" ondragover="handleDragOver(event,'edit')" ondragleave="handleDragLeave(event,'edit')" ondrop="handleDrop(event,'edit')">
+        <input type="file" id="edit-file-input" accept="image/jpeg,image/png,image/webp" multiple onchange="handleFileSelect(event,'edit')"/>
+        <div class="upload-zone-text"><strong>拖拽圖片至此或點擊上傳</strong>支援 JPG、PNG、WebP，可多選</div>
+        <div class="upload-progress" id="edit-upload-progress"><div class="upload-progress-fill" id="edit-upload-fill"></div></div>
+      </div>
+      <div class="img-preview-grid" id="edit-img-previews"></div>
+      <label class="field-label" style="margin-top:4px">或貼入圖片網址（一行一個）</label>
+      <textarea id="edit-imgs" rows="2"></textarea>
     </div>
-    <div id="edit-img-previews" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
     <div class="fgroup" style="margin-bottom:16px"><label class="field-label">Style Tags (comma separated)</label><input type="text" id="edit-tags"/></div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-black btn-block" onclick="saveEditProduct()" style="flex:2">Save Changes</button>
@@ -900,12 +925,7 @@ function switchAtab(name, btn) {
 document.addEventListener('DOMContentLoaded', ()=>{
   const imgsInput = document.getElementById('add-imgs');
   if(imgsInput) {
-    imgsInput.addEventListener('input', ()=>{
-      const urls = imgsInput.value.split('\n').map(s=>s.trim()).filter(Boolean);
-      const preview = document.getElementById('add-img-previews');
-      preview.innerHTML = urls.map(url=>`<img src="${url}" style="width:80px;height:100px;object-fit:cover;border-radius:3px;border:1px solid var(--border)" onerror="this.style.display='none'">`).join('');
-      preview.style.display = urls.length ? 'flex' : 'none';
-    });
+    imgsInput.addEventListener('input', ()=>renderUploadPreviews('add'));
   }
 });
 
@@ -933,8 +953,8 @@ function clearAddForm(){
   ['add-name','add-sub','add-price','add-desc','add-imgs','add-tags','add-arrival','add-sizes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('add-cat').value='上裝';
   document.getElementById('add-img-previews').innerHTML='';
-  document.getElementById('add-img-previews').style.display='none';
   document.getElementById('add-status').style.display='none';
+  addUploadedUrls = [];
 }
 
 // MANAGE
@@ -1131,6 +1151,105 @@ function loadSettings(){
   fields.forEach(([elId,key])=>{ const el=document.getElementById(elId); const val=localStorage.getItem(key); if(el&&val) el.value=val; });
 }
 
+// ── IMAGE UPLOAD ──
+let addUploadedUrls = [];
+let editUploadedUrls = [];
+
+function handleDragOver(e, prefix) {
+  e.preventDefault();
+  document.getElementById(prefix+'-upload-zone').classList.add('drag-over');
+}
+function handleDragLeave(e, prefix) {
+  document.getElementById(prefix+'-upload-zone').classList.remove('drag-over');
+}
+function handleDrop(e, prefix) {
+  e.preventDefault();
+  document.getElementById(prefix+'-upload-zone').classList.remove('drag-over');
+  const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/'));
+  if(files.length) uploadImages(files, prefix);
+}
+function handleFileSelect(e, prefix) {
+  const files = [...e.target.files];
+  if(files.length) uploadImages(files, prefix);
+  e.target.value = '';
+}
+
+async function uploadImages(files, prefix) {
+  const progress = document.getElementById(prefix+'-upload-progress');
+  const fill = document.getElementById(prefix+'-upload-fill');
+  progress.style.display = 'block';
+  
+  const urls = prefix === 'add' ? addUploadedUrls : editUploadedUrls;
+  
+  for(let i = 0; i < files.length; i++) {
+    const file = files[i];
+    fill.style.width = ((i / files.length) * 80) + '%';
+    
+    try {
+      const ext = file.name.split('.').pop();
+      const fileName = Date.now() + '_' + Math.random().toString(36).slice(2) + '.' + ext;
+      const sbUrl = getSbUrl();
+      const sbKey = getSbKey();
+      
+      const res = await fetch(`${sbUrl}/storage/v1/object/product-images/${fileName}`, {
+        method: 'POST',
+        headers: {
+          'apikey': sbKey,
+          'Authorization': 'Bearer ' + sbKey,
+          'Content-Type': file.type,
+          'x-upsert': 'true'
+        },
+        body: file
+      });
+      
+      if(res.ok) {
+        const publicUrl = `${sbUrl}/storage/v1/object/public/product-images/${fileName}`;
+        urls.push(publicUrl);
+      }
+    } catch(e) {
+      console.error('Upload failed:', e);
+    }
+  }
+  
+  fill.style.width = '100%';
+  setTimeout(() => { progress.style.display = 'none'; fill.style.width = '0'; }, 600);
+  
+  renderUploadPreviews(prefix);
+}
+
+function renderUploadPreviews(prefix) {
+  const el = document.getElementById(prefix+'-img-previews');
+  const urls = prefix === 'add' ? addUploadedUrls : editUploadedUrls;
+  // Also include URLs from textarea
+  const textareaUrls = document.getElementById(prefix+'-imgs').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const allUrls = [...new Set([...urls, ...textareaUrls])];
+  
+  el.innerHTML = allUrls.map((url, i) => `
+    <div class="img-preview-item">
+      <img src="${url}" onerror="this.parentElement.style.display='none'"/>
+      <button class="remove-img" onclick="removeUploadedImg('${prefix}',${i})">x</button>
+    </div>
+  `).join('');
+}
+
+function removeUploadedImg(prefix, idx) {
+  const urls = prefix === 'add' ? addUploadedUrls : editUploadedUrls;
+  const textareaUrls = document.getElementById(prefix+'-imgs').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const allUrls = [...new Set([...urls, ...textareaUrls])];
+  allUrls.splice(idx, 1);
+  // Update both arrays
+  if(prefix === 'add') { addUploadedUrls = allUrls.filter(u => u.includes('supabase')); }
+  else { editUploadedUrls = allUrls.filter(u => u.includes('supabase')); }
+  document.getElementById(prefix+'-imgs').value = allUrls.filter(u => !u.includes('supabase')).join('\n');
+  renderUploadPreviews(prefix);
+}
+
+function getAllImgUrls(prefix) {
+  const uploaded = prefix === 'add' ? addUploadedUrls : editUploadedUrls;
+  const textareaUrls = document.getElementById(prefix+'-imgs').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  return [...new Set([...uploaded, ...textareaUrls])];
+}
+
 // EDIT MODAL
 function openEditModal(id) {
   const p = products.find(x=>x.id===id); if(!p) return;
@@ -1146,20 +1265,17 @@ function openEditModal(id) {
   // Populate category select
   const catSel = document.getElementById('edit-cat');
   catSel.innerHTML = categories.map(c=>`<option value="${c.name}" ${c.name===p.category?'selected':''}>${c.name}</option>`).join('');
-  // Image previews
-  updateEditPreviews();
-  document.getElementById('edit-imgs').addEventListener('input', updateEditPreviews);
+  // Load existing images
+  editUploadedUrls = (p.images||[]).filter(u => u.includes('supabase'));
+  document.getElementById('edit-imgs').value = (p.images||[]).filter(u => !u.includes('supabase')).join('\n');
+  renderUploadPreviews('edit');
+  document.getElementById('edit-imgs').addEventListener('input', ()=>renderUploadPreviews('edit'));
   document.getElementById('edit-status').style.display='none';
   document.getElementById('edit-modal').style.display='block';
   document.body.style.overflow='hidden';
 }
 
-function updateEditPreviews() {
-  const urls = document.getElementById('edit-imgs').value.split('\n').map(s=>s.trim()).filter(Boolean);
-  const el = document.getElementById('edit-img-previews');
-  el.innerHTML = urls.map(url=>`<img src="${url}" style="width:80px;height:100px;object-fit:cover;border-radius:3px;border:1px solid var(--border)" onerror="this.style.display='none'">`).join('');
-  el.style.display = urls.length ? 'flex' : 'none';
-}
+
 
 function closeEditModal() {
   document.getElementById('edit-modal').style.display='none';
@@ -1175,7 +1291,7 @@ async function saveEditProduct() {
     el.style.display='block'; el.className='add-status err'; el.textContent='Please enter name and price.';
     return; 
   }
-  const imgs = document.getElementById('edit-imgs').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const imgs = getAllImgUrls('edit');
   const updates = {
     name, sub: document.getElementById('edit-sub').value.trim(),
     price, category: document.getElementById('edit-cat').value,
