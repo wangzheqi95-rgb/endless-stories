@@ -462,7 +462,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
         </div>
         <div class="img-preview-grid" id="add-img-previews"></div>
         <label class="field-label" style="margin-top:4px">或貼入圖片網址（一行一個）</label>
-        <textarea id="add-imgs" rows="2" placeholder="https://img.alicdn.com/..."></textarea>
+        <textarea id="add-imgs" rows="2" placeholder="https://img.alicdn.com/..." oninput="syncUrlsFromTextarea('add');renderUploadPreviews('add')"></textarea>
       </div>
       <div class="fgroup"><label class="field-label">Style Tags (comma separated)</label><input type="text" id="add-tags" placeholder="日系, 簡約, 復古"/></div>
       <div style="display:flex;gap:8px">
@@ -631,7 +631,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
       </div>
       <div class="img-preview-grid" id="edit-img-previews"></div>
       <label class="field-label" style="margin-top:4px">或貼入圖片網址（一行一個）</label>
-      <textarea id="edit-imgs" rows="2"></textarea>
+      <textarea id="edit-imgs" rows="2" oninput="syncUrlsFromTextarea('edit');renderUploadPreviews('edit')"></textarea>
     </div>
     <div class="fgroup" style="margin-bottom:16px"><label class="field-label">Style Tags (comma separated)</label><input type="text" id="edit-tags"/></div>
     <div style="display:flex;gap:8px">
@@ -927,10 +927,7 @@ function switchAtab(name, btn) {
 
 // ADD PRODUCT
 document.addEventListener('DOMContentLoaded', ()=>{
-  const imgsInput = document.getElementById('add-imgs');
-  if(imgsInput) {
-    imgsInput.addEventListener('input', ()=>{ syncUrlsFromTextarea('add'); renderUploadPreviews('add'); });
-  }
+  // add-imgs listener handled inline via oninput
 });
 
 async function submitAddProduct(){
@@ -1212,7 +1209,12 @@ async function uploadImages(files, prefix) {
 function syncUrlsFromTextarea(prefix) {
   const textareaUrls = document.getElementById(prefix+'-imgs').value.split('\n').map(s=>s.trim()).filter(Boolean);
   const urls = getImgUrls(prefix);
-  textareaUrls.forEach(u => { if(!urls.includes(u)) urls.push(u); });
+  // Remove urls that were from textarea but no longer in textarea
+  const supabaseUrls = urls.filter(u => u.includes('/storage/v1/object/public/'));
+  // Merge: supabase uploads first, then textarea urls
+  const merged = [...supabaseUrls];
+  textareaUrls.forEach(u => { if(!merged.includes(u)) merged.push(u); });
+  setImgUrls(prefix, merged);
 }
 
 function renderUploadPreviews(prefix) {
@@ -1288,7 +1290,7 @@ function openEditModal(id) {
   editImgUrls = [...(p.images||[])];
   document.getElementById('edit-imgs').value = '';
   renderUploadPreviews('edit');
-  document.getElementById('edit-imgs').addEventListener('input', ()=>{ syncUrlsFromTextarea('edit'); renderUploadPreviews('edit'); });
+  // edit-imgs listener handled inline via oninput
   document.getElementById('edit-status').style.display='none';
   document.getElementById('edit-modal').style.display='block';
   document.body.style.overflow='hidden';
