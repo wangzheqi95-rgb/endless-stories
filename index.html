@@ -248,10 +248,14 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
 .upload-zone-text strong{display:block;font-size:13px;color:var(--black);margin-bottom:4px}
 .upload-progress{height:2px;background:var(--border);border-radius:1px;margin-top:8px;overflow:hidden;display:none}
 .upload-progress-fill{height:100%;width:0;background:var(--black);transition:width .3s}
-.img-preview-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
-.img-preview-item{position:relative;width:80px;height:100px}
-.img-preview-item img{width:100%;height:100%;object-fit:cover;border-radius:3px;border:1px solid var(--border)}
+.img-preview-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;min-height:20px}
+.img-preview-item{position:relative;width:80px;height:100px;cursor:grab;user-select:none}
+.img-preview-item:active{cursor:grabbing}
+.img-preview-item.dragging{opacity:.4;border:2px dashed var(--black);border-radius:3px}
+.img-preview-item.drag-target{border:2px solid var(--wine);border-radius:3px}
+.img-preview-item img{width:100%;height:100%;object-fit:cover;border-radius:3px;border:1px solid var(--border);pointer-events:none}
 .img-preview-item .remove-img{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--black);color:#fff;border:none;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.img-preview-item .main-badge{position:absolute;bottom:2px;left:2px;background:var(--wine);color:#fff;font-size:9px;padding:1px 5px;border-radius:2px;letter-spacing:.04em;pointer-events:none}
 
 /* ── MODAL ── */
 #toast-el{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--black);color:#fff;padding:10px 20px;border-radius:2px;font-size:11px;letter-spacing:.08em;opacity:0;transition:all .3s;pointer-events:none;z-index:9999;white-space:nowrap}
@@ -925,7 +929,7 @@ function switchAtab(name, btn) {
 document.addEventListener('DOMContentLoaded', ()=>{
   const imgsInput = document.getElementById('add-imgs');
   if(imgsInput) {
-    imgsInput.addEventListener('input', ()=>renderUploadPreviews('add'));
+    imgsInput.addEventListener('input', ()=>{ syncUrlsFromTextarea('add'); renderUploadPreviews('add'); });
   }
 });
 
@@ -954,7 +958,7 @@ function clearAddForm(){
   document.getElementById('add-cat').value='上裝';
   document.getElementById('add-img-previews').innerHTML='';
   document.getElementById('add-status').style.display='none';
-  addUploadedUrls = [];
+  addImgUrls = [];
 }
 
 // MANAGE
@@ -1151,9 +1155,14 @@ function loadSettings(){
   fields.forEach(([elId,key])=>{ const el=document.getElementById(elId); const val=localStorage.getItem(key); if(el&&val) el.value=val; });
 }
 
-// ── IMAGE UPLOAD ──
-let addUploadedUrls = [];
-let editUploadedUrls = [];
+// ── IMAGE UPLOAD & SORT ──
+let addImgUrls = [];
+let editImgUrls = [];
+let dragSrcIdx = null;
+let dragPrefix = null;
+
+function getImgUrls(prefix) { return prefix === 'add' ? addImgUrls : editImgUrls; }
+function setImgUrls(prefix, urls) { if(prefix==='add') addImgUrls=urls; else editImgUrls=urls; }
 
 function handleDragOver(e, prefix) {
   e.preventDefault();
@@ -1178,76 +1187,86 @@ async function uploadImages(files, prefix) {
   const progress = document.getElementById(prefix+'-upload-progress');
   const fill = document.getElementById(prefix+'-upload-fill');
   progress.style.display = 'block';
-  
-  const urls = prefix === 'add' ? addUploadedUrls : editUploadedUrls;
-  
+  const urls = getImgUrls(prefix);
   for(let i = 0; i < files.length; i++) {
     const file = files[i];
-    fill.style.width = ((i / files.length) * 80) + '%';
-    
+    fill.style.width = ((i/files.length)*80)+'%';
     try {
       const ext = file.name.split('.').pop();
-      const fileName = Date.now() + '_' + Math.random().toString(36).slice(2) + '.' + ext;
-      const sbUrl = getSbUrl();
-      const sbKey = getSbKey();
-      
-      const res = await fetch(`${sbUrl}/storage/v1/object/product-images/${fileName}`, {
-        method: 'POST',
-        headers: {
-          'apikey': sbKey,
-          'Authorization': 'Bearer ' + sbKey,
-          'Content-Type': file.type,
-          'x-upsert': 'true'
-        },
-        body: file
+      const fileName = Date.now()+'_'+Math.random().toString(36).slice(2)+'.'+ext;
+      const sbUrl = getSbUrl(); const sbKey = getSbKey();
+      const res = await fetch(`${sbUrl}/storage/v1/object/product-images/${fileName}`,{
+        method:'POST',
+        headers:{'apikey':sbKey,'Authorization':'Bearer '+sbKey,'Content-Type':file.type,'x-upsert':'true'},
+        body:file
       });
-      
-      if(res.ok) {
-        const publicUrl = `${sbUrl}/storage/v1/object/public/product-images/${fileName}`;
-        urls.push(publicUrl);
-      }
-    } catch(e) {
-      console.error('Upload failed:', e);
-    }
+      if(res.ok) urls.push(`${sbUrl}/storage/v1/object/public/product-images/${fileName}`);
+    } catch(e){ console.error('Upload failed:',e); }
   }
-  
-  fill.style.width = '100%';
-  setTimeout(() => { progress.style.display = 'none'; fill.style.width = '0'; }, 600);
-  
+  fill.style.width='100%';
+  setTimeout(()=>{ progress.style.display='none'; fill.style.width='0'; },600);
+  syncUrlsFromTextarea(prefix);
   renderUploadPreviews(prefix);
+}
+
+function syncUrlsFromTextarea(prefix) {
+  const textareaUrls = document.getElementById(prefix+'-imgs').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const urls = getImgUrls(prefix);
+  textareaUrls.forEach(u => { if(!urls.includes(u)) urls.push(u); });
 }
 
 function renderUploadPreviews(prefix) {
   const el = document.getElementById(prefix+'-img-previews');
-  const urls = prefix === 'add' ? addUploadedUrls : editUploadedUrls;
-  // Also include URLs from textarea
-  const textareaUrls = document.getElementById(prefix+'-imgs').value.split('\n').map(s=>s.trim()).filter(Boolean);
-  const allUrls = [...new Set([...urls, ...textareaUrls])];
-  
-  el.innerHTML = allUrls.map((url, i) => `
-    <div class="img-preview-item">
+  const urls = getImgUrls(prefix);
+  if(!urls.length){ el.innerHTML=''; return; }
+  el.innerHTML = urls.map((url,i) => `
+    <div class="img-preview-item" draggable="true"
+      ondragstart="sortDragStart(event,'${prefix}',${i})"
+      ondragover="sortDragOver(event,${i})"
+      ondrop="sortDrop(event,'${prefix}',${i})"
+      ondragend="sortDragEnd('${prefix}')">
       <img src="${url}" onerror="this.parentElement.style.display='none'"/>
-      <button class="remove-img" onclick="removeUploadedImg('${prefix}',${i})">x</button>
+      <button class="remove-img" onclick="removeImg('${prefix}',${i})">x</button>
+      ${i===0?'<div class="main-badge">MAIN</div>':''}
     </div>
   `).join('');
 }
 
-function removeUploadedImg(prefix, idx) {
-  const urls = prefix === 'add' ? addUploadedUrls : editUploadedUrls;
-  const textareaUrls = document.getElementById(prefix+'-imgs').value.split('\n').map(s=>s.trim()).filter(Boolean);
-  const allUrls = [...new Set([...urls, ...textareaUrls])];
-  allUrls.splice(idx, 1);
-  // Update both arrays
-  if(prefix === 'add') { addUploadedUrls = allUrls.filter(u => u.includes('supabase')); }
-  else { editUploadedUrls = allUrls.filter(u => u.includes('supabase')); }
-  document.getElementById(prefix+'-imgs').value = allUrls.filter(u => !u.includes('supabase')).join('\n');
+function sortDragStart(e, prefix, idx) {
+  dragSrcIdx = idx; dragPrefix = prefix;
+  setTimeout(()=>{ const items=document.querySelectorAll('#'+prefix+'-img-previews .img-preview-item'); if(items[idx]) items[idx].classList.add('dragging'); },0);
+}
+function sortDragOver(e, idx) {
+  e.preventDefault();
+  document.querySelectorAll('#'+dragPrefix+'-img-previews .img-preview-item').forEach((el,i)=>{
+    el.classList.toggle('drag-target', i===idx && i!==dragSrcIdx);
+  });
+}
+function sortDrop(e, prefix, idx) {
+  e.preventDefault();
+  if(dragSrcIdx===null || dragSrcIdx===idx) return;
+  const urls = getImgUrls(prefix);
+  const moved = urls.splice(dragSrcIdx,1)[0];
+  urls.splice(idx,0,moved);
+  setImgUrls(prefix,urls);
+  renderUploadPreviews(prefix);
+}
+function sortDragEnd(prefix) {
+  dragSrcIdx=null; dragPrefix=null;
+  document.querySelectorAll('#'+prefix+'-img-previews .img-preview-item').forEach(el=>{
+    el.classList.remove('dragging','drag-target');
+  });
+}
+
+function removeImg(prefix, idx) {
+  const urls = getImgUrls(prefix);
+  urls.splice(idx,1);
   renderUploadPreviews(prefix);
 }
 
 function getAllImgUrls(prefix) {
-  const uploaded = prefix === 'add' ? addUploadedUrls : editUploadedUrls;
-  const textareaUrls = document.getElementById(prefix+'-imgs').value.split('\n').map(s=>s.trim()).filter(Boolean);
-  return [...new Set([...uploaded, ...textareaUrls])];
+  syncUrlsFromTextarea(prefix);
+  return [...getImgUrls(prefix)];
 }
 
 // EDIT MODAL
@@ -1266,10 +1285,10 @@ function openEditModal(id) {
   const catSel = document.getElementById('edit-cat');
   catSel.innerHTML = categories.map(c=>`<option value="${c.name}" ${c.name===p.category?'selected':''}>${c.name}</option>`).join('');
   // Load existing images
-  editUploadedUrls = (p.images||[]).filter(u => u.includes('supabase'));
-  document.getElementById('edit-imgs').value = (p.images||[]).filter(u => !u.includes('supabase')).join('\n');
+  editImgUrls = [...(p.images||[])];
+  document.getElementById('edit-imgs').value = '';
   renderUploadPreviews('edit');
-  document.getElementById('edit-imgs').addEventListener('input', ()=>renderUploadPreviews('edit'));
+  document.getElementById('edit-imgs').addEventListener('input', ()=>{ syncUrlsFromTextarea('edit'); renderUploadPreviews('edit'); });
   document.getElementById('edit-status').style.display='none';
   document.getElementById('edit-modal').style.display='block';
   document.body.style.overflow='hidden';
