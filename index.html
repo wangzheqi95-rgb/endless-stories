@@ -1209,12 +1209,9 @@ async function uploadImages(files, prefix) {
 function syncUrlsFromTextarea(prefix) {
   const textareaUrls = document.getElementById(prefix+'-imgs').value.split('\n').map(s=>s.trim()).filter(Boolean);
   const urls = getImgUrls(prefix);
-  // Remove urls that were from textarea but no longer in textarea
-  const supabaseUrls = urls.filter(u => u.includes('/storage/v1/object/public/'));
-  // Merge: supabase uploads first, then textarea urls
-  const merged = [...supabaseUrls];
-  textareaUrls.forEach(u => { if(!merged.includes(u)) merged.push(u); });
-  setImgUrls(prefix, merged);
+  // Add new textarea urls not already in the list
+  textareaUrls.forEach(u => { if(u && !urls.includes(u)) urls.push(u); });
+  setImgUrls(prefix, urls);
 }
 
 function renderUploadPreviews(prefix) {
@@ -1267,8 +1264,10 @@ function removeImg(prefix, idx) {
 }
 
 function getAllImgUrls(prefix) {
-  syncUrlsFromTextarea(prefix);
-  return [...getImgUrls(prefix)];
+  const textareaUrls = document.getElementById(prefix+'-imgs').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const urls = [...getImgUrls(prefix)];
+  textareaUrls.forEach(u => { if(u && !urls.includes(u)) urls.push(u); });
+  return urls;
 }
 
 // EDIT MODAL
@@ -1286,11 +1285,10 @@ function openEditModal(id) {
   // Populate category select
   const catSel = document.getElementById('edit-cat');
   catSel.innerHTML = categories.map(c=>`<option value="${c.name}" ${c.name===p.category?'selected':''}>${c.name}</option>`).join('');
-  // Load existing images
+  // Load existing images - ALL urls go into editImgUrls
   editImgUrls = [...(p.images||[])];
   document.getElementById('edit-imgs').value = '';
   renderUploadPreviews('edit');
-  // edit-imgs listener handled inline via oninput
   document.getElementById('edit-status').style.display='none';
   document.getElementById('edit-modal').style.display='block';
   document.body.style.overflow='hidden';
