@@ -1125,7 +1125,7 @@ function renderOrders(orders){
   const statusClass = (s) => s==='待確認'?'s-wait':s==='待出貨'?'s-pending':s==='已出貨'?'s-shipped':s==='已婉拒'?'s-rejected':'s-done';
   el.innerHTML=filtered.map(o=>`
     <div class="order-card" style="${(o.status==='已完成'||o.status==='已婉拒')?'opacity:.6':''}">
-      <div class="order-hd"><span class="order-no">${o.order_no}</span><span class="status-badge ${statusClass(o.status)}">${o.status}</span></div>
+      <div class="order-hd"><span class="order-no">${o.order_no}</span><div style="display:flex;gap:6px;align-items:center"><span class="status-badge ${statusClass(o.status)}">${o.status}</span><button class="btn btn-outline" onclick="deleteOrder('${o.id}')" style="font-size:9px;padding:3px 8px;color:var(--wine);border-color:var(--wine)">Delete</button></div></div>
       <div class="order-name">${o.customer_name}</div>
       <div class="order-meta">${o.phone}${o.email?' · '+o.email:''}<br>${o.address}<br>${o.shipping_method}${o.note?'<br>備註：'+o.note:''}</div>
       <div class="order-items">${(o.items||[]).map(i=>`${i.name}(${i.size})x${i.qty}`).join(', ')}</div>
@@ -1199,6 +1199,12 @@ async function updateTracking(id){
 async function markDone(id){
   try { await sbFetch(`orders?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({status:'已完成'})}); showToast('Marked complete'); loadOrders(); }
   catch(e){ showToast('Error'); }
+}
+
+async function deleteOrder(id){
+  if(!confirm('確定要刪除這筆訂單？此動作無法復原。')) return;
+  try { await sbFetch(`orders?id=eq.${id}`,{method:'DELETE'}); showToast('訂單已刪除'); loadOrders(); }
+  catch(e){ showToast('Error deleting order'); }
 }
 
 function exportCSV(){
