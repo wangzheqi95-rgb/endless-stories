@@ -218,6 +218,8 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
 .s-pending{background:#fff8e8;color:#7a5500;border:1px solid #e8d8a0}
 .s-shipped{background:#e8f0f8;color:#1a4a8b;border:1px solid #b0c8e8}
 .s-done{background:#f0f7f0;color:#2a6b2a;border:1px solid #b8dab8}
+.s-wait{background:#f0e8ea;color:#6B1A2A;border:1px solid #d8b8c0}
+.s-rejected{background:#f5f5f5;color:#888;border:1px solid #ddd}
 .order-name{font-size:13px;font-weight:500;margin-bottom:3px}
 .order-meta{font-size:11px;color:var(--mid);line-height:1.7}
 .order-items{font-size:11px;color:var(--mid);margin-top:5px;padding-top:5px;border-top:1px solid var(--border)}
@@ -284,6 +286,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
   .pm-grid{grid-template-columns:repeat(2,1fr)}
 }
 </style>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
 
@@ -904,12 +907,43 @@ async function submitOrder(){
   const orderId='ES'+Date.now().toString().slice(-8);
   const total=cart.reduce((s,c)=>s+(c.price||0)*c.qty,0)+shippingFee;
   const shippingName=document.querySelector('.ship-opt.sel .ship-name').textContent;
-  const orderData={order_no:orderId,customer_name:name,phone,email:document.getElementById('f-email').value.trim()||null,address,shipping_method:shippingName,shipping_fee:shippingFee,note:(document.getElementById('f-note').value.trim() + (document.getElementById('f-cvs').value.trim() ? ' [超商門市：'+document.getElementById('f-cvs').value.trim()+']' : ''))||null,items:JSON.parse(JSON.stringify(cart)),total,status:'待出貨'};
+  const orderData={order_no:orderId,customer_name:name,phone,email:document.getElementById('f-email').value.trim()||null,address,shipping_method:shippingName,shipping_fee:shippingFee,note:(document.getElementById('f-note').value.trim() + (document.getElementById('f-cvs').value.trim() ? ' [超商門市：'+document.getElementById('f-cvs').value.trim()+']' : ''))||null,items:JSON.parse(JSON.stringify(cart)),total,status:'待確認'};
   try { await sbFetch('orders',{method:'POST',body:JSON.stringify(orderData)}); } catch(e){ console.warn('Order save failed',e); }
+  sendOrderNotification(orderData);
   document.getElementById('succ-detail').innerHTML=`<div style="font-size:10px;color:var(--mid);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">Order Details</div><div class="succ-row"><span>Order No.</span><span>${orderId}</span></div><div class="succ-row"><span>Name</span><span>${name}</span></div><div class="succ-row"><span>Phone</span><span>${phone}</span></div><div class="succ-row"><span>Address</span><span>${address}</span></div><div class="succ-row"><span>Shipping</span><span>${shippingName}</span></div><div class="succ-row" style="font-weight:500"><span>Total</span><span>NT$${total.toLocaleString()}</span></div>`;
   cart=[]; updateCartCount();
   showPage('success');
   window.scrollTo(0,0);
+}
+
+// ═══ EMAILJS ═══
+const EMAILJS_PUBLIC_KEY = 'xLtU4Cu9PLB68FXYW';
+const EMAILJS_SERVICE_ID = 'service_3b0vkqb';
+const EMAILJS_ORDER_NOTIFY_TEMPLATE = 'template_t9aa9hi';
+const EMAILJS_CUSTOMER_TEMPLATE = 'template_c419nzq';
+
+if(typeof emailjs !== 'undefined') {
+  emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+}
+
+async function sendOrderNotification(order) {
+  if(typeof emailjs === 'undefined') { console.warn('EmailJS not loaded'); return; }
+  const itemsText = (order.items||[]).map(i => `${i.name} (尺寸:${i.size}) x${i.qty} — NT$${(i.price||0)*i.qty}`).join('\n');
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_ORDER_NOTIFY_TEMPLATE, {
+      order_no: order.order_no,
+      customer_name: order.customer_name,
+      phone: order.phone,
+      customer_email: order.email || '未提供',
+      address: order.address,
+      shipping_method: order.shipping_method,
+      items: itemsText,
+      total: order.total
+    });
+    console.log('Order notification sent');
+  } catch(e) {
+    console.warn('Failed to send order notification email', e);
+  }
 }
 
 // ═══ ADMIN ═══
@@ -1085,20 +1119,27 @@ async function loadOrders(){
 
 function renderOrders(orders){
   const el=document.getElementById('orders-list');
-  const filtered = showArchived ? orders : orders.filter(o=>o.status!=='已完成');
+  const filtered = showArchived ? orders : orders.filter(o=>o.status!=='已完成' && o.status!=='已婉拒');
   document.getElementById('orders-count').textContent=`(${filtered.length}${showArchived?'':' active'})`;
   if(!filtered.length){ el.innerHTML=`<div style="padding:3rem;text-align:center;color:var(--mid);font-size:12px">${showArchived?'No orders.':'No active orders. Click "Show Archived" to see completed orders.'}</div>`; return; }
+  const statusClass = (s) => s==='待確認'?'s-wait':s==='待出貨'?'s-pending':s==='已出貨'?'s-shipped':s==='已婉拒'?'s-rejected':'s-done';
   el.innerHTML=filtered.map(o=>`
-    <div class="order-card" style="${o.status==='已完成'?'opacity:.6':''}">
-      <div class="order-hd"><span class="order-no">${o.order_no}</span><span class="status-badge ${o.status==='待出貨'?'s-pending':o.status==='已出貨'?'s-shipped':'s-done'}">${o.status}</span></div>
+    <div class="order-card" style="${(o.status==='已完成'||o.status==='已婉拒')?'opacity:.6':''}">
+      <div class="order-hd"><span class="order-no">${o.order_no}</span><span class="status-badge ${statusClass(o.status)}">${o.status}</span></div>
       <div class="order-name">${o.customer_name}</div>
       <div class="order-meta">${o.phone}${o.email?' · '+o.email:''}<br>${o.address}<br>${o.shipping_method}${o.note?'<br>備註：'+o.note:''}</div>
       <div class="order-items">${(o.items||[]).map(i=>`${i.name}(${i.size})x${i.qty}`).join(', ')}</div>
       <div class="order-total">NT$${(o.total||0).toLocaleString()}</div>
-      ${o.status!=='已完成'?`<div class="tracking-row">
+      ${o.status==='待確認'?`<div class="tracking-row">
+        <button class="btn btn-black" onclick="approveOrder('${o.id}')" style="font-size:10px;padding:5px 10px;white-space:nowrap;flex:1">確認成立</button>
+        <button class="btn btn-outline" onclick="rejectOrder('${o.id}')" style="font-size:10px;padding:5px 10px;white-space:nowrap;flex:1;color:var(--wine);border-color:var(--wine)">婉拒</button>
+      </div>`:''}
+      ${o.status==='待出貨'?`<div class="tracking-row">
         <input type="text" placeholder="Tracking number" value="${o.tracking_no||''}" id="track-${o.id}"/>
         <button class="btn btn-outline" onclick="updateTracking('${o.id}')" style="font-size:10px;padding:5px 10px;white-space:nowrap">Update</button>
-        <button class="btn btn-wine" onclick="markDone('${o.id}')" style="font-size:10px;padding:5px 10px;white-space:nowrap">Done</button>
+      </div>`:''}
+      ${o.status==='已出貨'?`<div class="tracking-row">
+        <button class="btn btn-wine" onclick="markDone('${o.id}')" style="font-size:10px;padding:5px 10px;white-space:nowrap">Mark Complete</button>
       </div>`:''}
     </div>
   `).join('');
@@ -1108,6 +1149,44 @@ function toggleArchived(){
   showArchived = !showArchived;
   document.getElementById('archive-toggle-btn').textContent = showArchived ? 'Hide Archived' : 'Show Archived';
   loadOrders();
+}
+
+async function approveOrder(id){
+  const orders = await sbFetch('orders?id=eq.'+id).catch(()=>null);
+  const order = orders && orders[0];
+  try {
+    await sbFetch(`orders?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({status:'待出貨'})});
+    if(order && order.email) {
+      const itemsText = (order.items||[]).map(i => `${i.name} (尺寸:${i.size}) x${i.qty} — NT$${(i.price||0)*i.qty}`).join('\n');
+      emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_CUSTOMER_TEMPLATE, {
+        email: order.email,
+        customer_name: order.customer_name,
+        order_no: order.order_no,
+        items: itemsText,
+        total: order.total,
+        approved: true
+      }).catch(e=>console.warn('Customer email failed',e));
+    }
+    showToast('訂單已確認成立'); loadOrders();
+  } catch(e){ showToast('Error'); }
+}
+
+async function rejectOrder(id){
+  if(!confirm('確定要婉拒此訂單？')) return;
+  const orders = await sbFetch('orders?id=eq.'+id).catch(()=>null);
+  const order = orders && orders[0];
+  try {
+    await sbFetch(`orders?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({status:'已婉拒'})});
+    if(order && order.email) {
+      emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_CUSTOMER_TEMPLATE, {
+        email: order.email,
+        customer_name: order.customer_name,
+        order_no: order.order_no,
+        approved: false
+      }).catch(e=>console.warn('Customer email failed',e));
+    }
+    showToast('訂單已婉拒'); loadOrders();
+  } catch(e){ showToast('Error'); }
 }
 
 async function updateTracking(id){
