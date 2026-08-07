@@ -337,6 +337,20 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
     </div>
   </div>
 
+  <!-- TRACK ORDER -->
+  <div id="page-track" style="display:none">
+    <div class="about-wrap">
+      <div class="about-title">Track Order</div>
+      <div class="about-line"></div>
+      <div class="about-body">
+        <p>輸入您下單時取得的訂單編號，即可查詢目前的處理狀態。</p>
+        <div class="fgroup"><label class="field-label">Order Number</label><input type="text" id="track-order-input" placeholder="請輸入訂單編號"/></div>
+        <button class="submit-btn" onclick="lookupOrderByNo()">查詢訂單</button>
+        <div id="track-result" style="margin-top:20px"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- PRODUCT DETAIL -->
   <div id="page-detail" style="display:none">
     <div class="detail-wrap" id="detail-wrap">
@@ -400,7 +414,8 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
     <div class="succ-title">Order Confirmed</div>
     <div class="succ-desc">感謝您的訂購！我們將於 7-14 個工作天內出貨，並主動與您聯繫。</div>
     <div class="succ-detail" id="succ-detail"></div>
-    <button class="submit-btn" onclick="showPage('shop')" style="margin-top:16px">Continue Shopping</button>
+    <button class="submit-btn" onclick="showTrackOrder()" style="margin-top:16px">Track This Order</button>
+    <button class="submit-btn" onclick="showPage('shop')" style="margin-top:8px;background:transparent;color:var(--black);border:1px solid var(--border)">Continue Shopping</button>
   </div>
 
   <!-- CART -->
@@ -743,7 +758,8 @@ function renderShopNav() {
   const nav = document.getElementById('shop-nav');
   nav.innerHTML = `<button class="snav-btn active" onclick="shopFilter('全部',this)">All</button>` +
     categories.map(c => `<button class="snav-btn" onclick="shopFilter('${c.name}',this)">${c.name_en||c.name}</button>`).join('') +
-    `<button class="snav-btn" onclick="showAbout()">About</button>`;
+    `<button class="snav-btn" onclick="showAbout()">About</button>` +
+    `<button class="snav-btn" onclick="showTrackOrder()">Track Order</button>`;
 }
 
 function renderAdminCatFilter() {
@@ -764,11 +780,47 @@ function showAbout() {
   showPage('about');
 }
 
+function showTrackOrder() {
+  document.querySelectorAll('.snav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('track-result').innerHTML = '';
+  document.getElementById('track-order-input').value = '';
+  showPage('track');
+}
+
+async function lookupOrderByNo() {
+  const input = document.getElementById('track-order-input');
+  const resultEl = document.getElementById('track-result');
+  const no = (input.value || '').trim();
+  if (!no) { resultEl.innerHTML = '<div class="policy-box">請輸入訂單編號</div>'; return; }
+  resultEl.innerHTML = '<div class="policy-box">查詢中...</div>';
+  try {
+    // 只查詢 order_lookup（安全檢視表，不含個資），絕不直接查 orders 表
+    const rows = await sbFetch('order_lookup?order_no=eq.' + encodeURIComponent(no));
+    if (!rows || !rows.length) {
+      resultEl.innerHTML = '<div class="policy-box">查無此訂單編號，請確認輸入是否正確。</div>';
+      return;
+    }
+    const o = rows[0];
+    resultEl.innerHTML = `
+      <div class="succ-detail">
+        <div><strong>訂單編號：</strong>${o.order_no}</div>
+        <div><strong>訂單狀態：</strong>${o.status||''}</div>
+        <div><strong>物流單號：</strong>${o.tracking_no||'尚未出貨'}</div>
+        <div><strong>訂單金額：</strong>NT$${(o.total||0).toLocaleString()}</div>
+        <div><strong>建立時間：</strong>${o.created_at ? new Date(o.created_at).toLocaleString('zh-TW') : ''}</div>
+      </div>`;
+  } catch (e) {
+    resultEl.innerHTML = '<div class="policy-box">查詢失敗，請稍後再試。</div>';
+    console.warn('Order lookup failed', e);
+  }
+}
+
 // ═══ SHOP ═══
 function showPage(page) {
   // Hide all pages
   document.getElementById('page-shop').style.display = 'none';
   document.getElementById('page-about').style.display = 'none';
+  document.getElementById('page-track').style.display = 'none';
   document.getElementById('page-detail').style.display = 'none';
   document.getElementById('checkout-wrap').style.display = 'none';
   document.getElementById('success-wrap').style.display = 'none';
@@ -776,6 +828,7 @@ function showPage(page) {
   // Show target
   if(page === 'shop') document.getElementById('page-shop').style.display = 'block';
   else if(page === 'about') document.getElementById('page-about').style.display = 'block';
+  else if(page === 'track') document.getElementById('page-track').style.display = 'block';
   else if(page === 'detail') document.getElementById('page-detail').style.display = 'block';
   else if(page === 'checkout') document.getElementById('checkout-wrap').style.display = 'block';
   else if(page === 'success') document.getElementById('success-wrap').style.display = 'block';
