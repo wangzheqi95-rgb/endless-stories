@@ -386,7 +386,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--black)}
       <div class="fgroup"><label class="field-label">Phone *</label><input type="tel" id="f-phone" placeholder="09xx-xxx-xxx"/></div>
       <div class="fgroup"><label class="field-label">Email</label><input type="email" id="f-email" placeholder="your@email.com"/></div>
     </div>
-    <div class="fgroup"><label class="field-label">Delivery Address *</label><input type="text" id="f-address" placeholder="縣市 鄉鎮市區 街道門號"/></div>
+
     <div class="fgroup"><label class="field-label">Notes</label><textarea id="f-note" rows="2" placeholder="備註..."></textarea></div>
     <div class="fgroup" id="cvs-field">
       <label class="field-label">取貨門市地址 *</label>
@@ -926,7 +926,7 @@ function selShip(el,fee,type){
 async function submitOrder(){
   const name=document.getElementById('f-name').value.trim();
   const phone=document.getElementById('f-phone').value.trim();
-  const address=document.getElementById('f-address').value.trim();
+  const address = document.getElementById('f-cvs').value.trim();
   const cvsStore = document.getElementById('f-cvs').value.trim();
   if(!name||!phone){ alert('Please fill in name and phone'); return; }
   if(!cvsStore){ alert('請填寫取貨門市地址'); return; }
@@ -936,7 +936,7 @@ async function submitOrder(){
   const orderData={order_no:orderId,customer_name:name,phone,email:document.getElementById('f-email').value.trim()||null,address:cvsStore,shipping_method:shippingName,shipping_fee:shippingFee,note:document.getElementById('f-note').value.trim()||null,items:JSON.parse(JSON.stringify(cart)),total,status:'待確認'};
   try { await sbFetch('orders',{method:'POST',body:JSON.stringify(orderData)}); } catch(e){ console.warn('Order save failed',e); }
   sendOrderNotification(orderData);
-  document.getElementById('succ-detail').innerHTML=`<div style="font-size:10px;color:var(--mid);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">Order Details</div><div class="succ-row"><span>Order No.</span><span>${orderId}</span></div><div class="succ-row"><span>Name</span><span>${name}</span></div><div class="succ-row"><span>Phone</span><span>${phone}</span></div><div class="succ-row"><span>Address</span><span>${address}</span></div><div class="succ-row"><span>Shipping</span><span>${shippingName}</span></div><div class="succ-row" style="font-weight:500"><span>Total</span><span>NT$${total.toLocaleString()}</span></div>`;
+  document.getElementById('succ-detail').innerHTML=`<div style="font-size:10px;color:var(--mid);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">Order Details</div><div class="succ-row"><span>Order No.</span><span>${orderId}</span></div><div class="succ-row"><span>Name</span><span>${name}</span></div><div class="succ-row"><span>Phone</span><span>${phone}</span></div><div class="succ-row"><span>取貨門市</span><span>${address}</span></div><div class="succ-row"><span>Shipping</span><span>${shippingName}</span></div><div class="succ-row" style="font-weight:500"><span>Total</span><span>NT$${total.toLocaleString()}</span></div>`;
   cart=[]; updateCartCount();
   showPage('success');
   window.scrollTo(0,0);
