@@ -72,7 +72,7 @@ function parseSheetRow(txt) {
 const BGS = [['淺灰', '#e3e4e7'], ['米白', '#f6f6f5'], ['沙色', '#d9cfc4'], ['墨黑', '#1e1f22']];
 function loadImgEl(src) { return new Promise((res, rej) => { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
 // ── 貼文模板（Claude 加的）：背景（底色或自己的圖）＋ 模特大小/位置 ＋ 浮水印字 ＋ 文案範本 ──
-const TPL_CAP = '【新品預購】{商品名}\n{副標}\nNT${價格}　尺寸 {尺寸}\n預購制・9～12 個工作日到貨・超商取貨付款\n#EndlessStories #預購';
+const TPL_CAP = '【新品預購】{商品名}\n{副標}\nNT${價格}　尺寸 {尺寸}\n預購制・7–14 個工作天到貨・超商取貨付款\n#EndlessStories #預購';
 const TPL_PRESETS = BGS.map(([n, c], i) => ({ id: 'p' + i, name: n, preset: true, bg_color: c, bg_image: '', wm_on: true, wm_text: 'ENDLESS', scale: 0.86, x: 0, y: 0.04, caption_tpl: TPL_CAP }));
 let TPLS = [], TPL_ERR = false;   // 自訂模板（存在 Supabase post_templates）
 const isDark = hex => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return false; const n = parseInt(m[1], 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) < 110; };
@@ -118,10 +118,10 @@ async function splitPair(blob) {
   const bbox = (x0, x1) => { let a = x1, b = x0; for (let x = x0; x < x1; x++) if (col[x] > 0) { a = Math.min(a, x); b = Math.max(b, x); } return b > a ? [a, b + 1] : null; };
   const L = bbox(0, mid), R = bbox(mid, W); if (!L || !R) return null;
   if ((L[1] - L[0]) < W * .12 || (R[1] - R[0]) < W * .12) return null;             // 一邊太小（可能是配件），不切
-  const cut = ([a, b]) => new Promise(res => { const c = document.createElement('canvas'); const pad = Math.round(W * .01); c.width = (b - a) + pad * 2; c.height = H; c.getContext('2d').drawImage(cv, a - pad, 0, c.width, H, 0, 0, c.width, H); c.toBlob(res, 'image/png'); });
+  const cut = ([a, b]) => new Promise(res => { const c = document.createElement('canvas'); const pad = Math.round(W * .01); c.width = (b - a) + pad * 2; c.height = H; c.getContext('2d').drawImage(cv, a - pad, 0, c.width, H, 0, 0, c.width, H); c.toBlob(b => { if (b) b._ox = a - pad; res(b); }, 'image/png'); });
   return [await cut(L), await cut(R)];
 }
-const newColor = () => ({ name: '', images: [], cutout: '', model: '', results: [] });   // results：批次處理的成果（不存進資料庫，只用來挑）
+const newColor = () => ({ name: '', images: [], cutout: '', model: '', results: [], cutMeta: null, rw: null });   // results：批次處理的成果（不存進資料庫，只用來挑）
 const newST = () => ({ id: null, step: 1, images: [], colors: [newColor()], ac: 0, sel: [], proc: { cut: true, model: false }, prompt: loadPrompt(), ask: false, busy: false, busyMsg: '', modelBase: (() => { try { return localStorage.getItem('es_model_base') || ''; } catch (e) { return ''; } })(), sku: '', cost: { buy: '', ship: '' }, name: '', sub: '', price: '', category: '', arrival: '', sizes: 'S,M,L', desc: '', published: false,
   chart: { headers: [], rows: [], img: '', id: null }, post: { on: true, caption: '', img: '', platforms: ['facebook', 'instagram'], tplId: 'p0', tpl: { ...TPL_PRESETS[0] }, when: '' }, prev: 'card' });
 const STEPS = ['照片與去背', '商品資料', '尺碼表', '社群貼文'];
@@ -138,7 +138,7 @@ V.studio = async () => {
     if (V.studio.editId) {
       const p = (await R('products?select=*&order=id.desc')).find(x => String(x.id) === String(V.studio.editId));
       if (p) {
-        const cols = (p.colors && p.colors.length) ? p.colors.map(c => ({ name: c.name || '', images: c.images || [], cutout: c.cutout || '', model: c.model || '' })) : [{ name: '', images: [], cutout: p.cutout_url || '', model: '' }];
+        const cols = (p.colors && p.colors.length) ? p.colors.map(c => ({ name: c.name || '', images: c.images || [], cutout: c.cutout || '', model: c.model || '', cutMeta: c.cutMeta || null, rw: c.rw || null })) : [{ name: '', images: [], cutout: p.cutout_url || '', model: '' }];
         Object.assign(ST, { id: p.id, images: p.images || [], colors: cols, sku: p.sku || '', name: p.name, sub: p.sub || '', price: p.price, category: p.category, arrival: p.arrival_date || '', sizes: (p.sizes || []).join(','), desc: p.description || '', published: !!p.published });
         const sc = scs.find(s => String(s.product_id) === String(p.id)); if (sc) ST.chart = { headers: sc.headers, rows: sc.rows, img: sc.image_url, id: sc.id };
       }
@@ -184,12 +184,13 @@ V.studio = async () => {
     t.bg_color = g('t_color').value; t.wm_text = g('t_wm').value; t.wm_on = g('t_wmon').checked; t.scale = +g('t_scale').value / 100; t.x = +g('t_x').value / 100; t.y = +g('t_y').value / 100; t.caption_tpl = g('t_cap').value; persist(); };
   const onInput = e => { const t = e.target;
     if (t.id === 'f_sq') { const box = document.getElementById('sq_list'), q = t.value; SheetDB.load().then(() => { const m = SheetDB.find(q); box.innerHTML = m.map((r, i) => `<button type="button" data-sq="${i}"><b>${esc(r.sku || '—')}</b> ${esc(r.name)} <span>NT$${r.price}</span></button>`).join(''); box.style.display = m.length ? 'block' : 'none'; SheetDB._m = m; const msg = document.getElementById('sq_msg'); if (msg) msg.textContent = SheetDB.err || (q && !m.length ? '找不到符合的商品' : ''); }); return; }
+    if (t.id === 'rw_s' || t.id === 'rw_y') { const c = curC(); c.rw = { s: +document.getElementById('rw_s').value / 100, y: +document.getElementById('rw_y').value }; const pv = document.getElementById('rwpv'); if (pv) { pv.style.setProperty('--rw-s', c.rw.s); pv.style.setProperty('--rw-dy', c.rw.y); } const o = document.getElementById('rw_out'); if (o) o.textContent = Math.round(c.rw.s * 100) + '%・' + (c.rw.y > 0 ? '+' : '') + c.rw.y; return; }
     if (t.id === 'p_prompt') { ST.prompt = t.value; try { localStorage.setItem(PK, ST.prompt); } catch (x) {} return; }
     if (t.id && t.id.startsWith('t_') && t.id !== 't_name') { readTpl(); preview(); return; } if (t.dataset.h) ST.chart.headers[+t.dataset.h] = t.value; if (t.dataset.r) { const rows = ST.chart.rows; rows[+t.dataset.r][+t.dataset.c] = t.value; const fc = rows.map(r => String(r[0] || '').trim()).filter(Boolean); if (fc.length) ST.sizes = fc.join(','); } if (['f_name', 'f_price', 'f_cap', 'f_sub', 'f_cat', 'f_sku', 'f_cname'].includes(t.id)) { sync(); preview(); } };
   const onChange = guard(async e => { const t = e.target;
     if (t.id === 'f_files') { for (const f of t.files) ST.images.push(await upC(f)); redraw(); }
     if (t.id === 'f_cfiles') { for (const f of t.files) curC().images.push(await upC(f)); redraw(); }
-    if (t.id === 'f_cutfile') { curC().cutout = await upC(t.files[0]); redraw(); }
+    if (t.id === 'f_cutfile') { const r = await upCut(t.files[0]); curC().cutout = r.url; curC().cutMeta = null; redraw(); }
     if (t.id === 'f_bgfile') { readTpl(); ST.post.tpl.bg_image = await upC(t.files[0]); redraw(); }
     if (t.id === 't_wmon') { readTpl(); preview(); }
     if (t.id === 'f_basefile') { ST.modelBase = await upC(t.files[0]); try { localStorage.setItem('es_model_base', ST.modelBase); } catch (x) {} redraw(); }
@@ -213,11 +214,11 @@ V.studio = async () => {
     if (d.mkcut) { // 對某張原圖去背，存成目前顏色的「模特去背圖」
       const [k, i] = d.mkcut.split(':'); t.textContent = '去背中…（第一次較久）'; const src = listOf(k)[+i]; const f = await (await fetch(src)).blob();
       try { const b = await Cutout.run(f); const pair = await splitPair(b).catch(() => null);
-        if (pair) { curC().pick = [await upC(new File([pair[0]], 'cut-a.png', { type: 'image/png' })), await upC(new File([pair[1]], 'cut-b.png', { type: 'image/png' }))]; toast('這張是並排雙人圖，已切成兩張，請在下方點一張'); }
-        else { curC().cutout = await upC(new File([b], 'cutout.png', { type: 'image/png' })); curC().pick = null; toast('去背完成，請放大檢查邊緣'); }
+        if (pair) { curC().pick = [await upCut(pair[0], src, pair[0]._ox || 0), await upCut(pair[1], src, pair[1]._ox || 0)]; toast('這張是並排雙人圖，已切成兩張，請在下方點一張'); }
+        else { const r = await upCut(b, src); curC().cutout = r.url; curC().cutMeta = r.meta; curC().pick = null; toast('去背完成（已自動裁掉四周空白），可按「手動修圖」修邊'); }
       } catch (x) { toast('自動去背失敗：' + x.message + '。可改用「上傳已去背 PNG」'); }
       return redraw(); }
-    if (d.pickcut !== undefined) { const c = curC(); if (c.pick && c.pick[+d.pickcut]) { c.cutout = c.pick[+d.pickcut]; c.pick = null; } return redraw(); }
+    if (d.pickcut !== undefined) { const c = curC(); const pk = c.pick && c.pick[+d.pickcut]; if (pk) { c.cutout = pk.url || pk; c.cutMeta = pk.meta || null; c.pick = null; } return redraw(); }
     if (d.postimg !== undefined) { sync(); ST.post.img = d.postimg; return draw(); }
     if (t.id === 'selall') { sync(); ST.sel = [...new Set([...ST.images, ...curC().images])]; ST.ask = false; return draw(); }
     if (t.id === 'runproc') { sync();
@@ -235,9 +236,16 @@ V.studio = async () => {
     if (d.sq !== undefined) { const r = (SheetDB._m || [])[+d.sq]; if (!r) return; sync(); ST.sku = r.sku || ''; ST.name = r.name; ST.price = r.price || ''; ST.cost = { buy: r.buy === '' ? '' : r.buy, ship: r.ship === '' ? '' : r.ship }; toast(r.sku ? '已帶入 ' + r.sku : '已帶入（Sheet 沒有編號欄）'); return draw(); }
     if (t.id === 'runno') { ST.ask = false; return draw(); }
     if (t.id === 'runok') { ST.ask = false; return runProc(); }
-    if (d.usecut) { const r = (curC().results || [])[+d.usecut]; if (r) curC().cutout = r.cutout; return redraw(); }
+    if (d.usecut) { const r = (curC().results || [])[+d.usecut]; if (r) { curC().cutout = r.cutout; curC().cutMeta = r.cutMeta || null; } return redraw(); }
     if (d.usemodel) { const r = (curC().results || [])[+d.usemodel]; if (r) curC().model = r.model; return redraw(); }
-    if (d.rmcut) { curC().cutout = ''; return redraw(); }
+    if (d.rmcut) { curC().cutout = ''; curC().cutMeta = null; return redraw(); }
+    if (d.cedit) { CutEditor.open(curC(), redraw); return; }
+    if (d.retrim) { const c = curC(); t.disabled = true; t.textContent = '裁切中…';
+      try { const b = await (await fetch(c.cutout)).blob(); const tr = await trimAlpha(b);
+        if (tr.same) toast('四周已經沒有多餘空白');
+        else { c.cutout = await upC(new File([tr.blob], 'cutout.png', { type: 'image/png' })); if (c.cutMeta) c.cutMeta = { src: c.cutMeta.src, ox: c.cutMeta.ox + tr.ox, oy: c.cutMeta.oy + tr.oy }; toast('已裁掉四周空白'); }
+      } catch (x) { toast('裁切失敗：' + x.message); }
+      return redraw(); }
     if (d.rmmodel) { curC().model = ''; return redraw(); }
     if (d.tpl) { sync(); const x = [...TPL_PRESETS, ...TPLS].find(v => String(v.id) === d.tpl); if (x) { ST.post.tplId = x.id; ST.post.tpl = { ...x }; } return draw(); }
     if (t.id === 't_bgclr') { ST.post.tpl.bg_image = ''; return draw(); }
@@ -280,10 +288,10 @@ V.studio = async () => {
         if (ST.proc.cut) { const b = await Cutout.run(await (await fetch(urls[i])).blob());
           const pair = await splitPair(b).catch(() => null);
           if (pair) {   // 並排雙人圖：切成左右兩張，各自一列
-            for (const pb of pair) { const rr = { src: urls[i], cutout: await upC(new File([pb], 'cutout.png', { type: 'image/png' })), model: '', err: '', stub: false, skip: '', note: '由並排圖自動分割' }; c.results.push(rr); if (!c.cutout) c.cutout = rr.cutout; }
+            for (const pb of pair) { const u = await upCut(pb, urls[i], pb._ox || 0); const rr = { src: urls[i], cutout: u.url, cutMeta: u.meta, model: '', err: '', stub: false, skip: '', note: '由並排圖自動分割' }; c.results.push(rr); if (!c.cutout) { c.cutout = rr.cutout; c.cutMeta = rr.cutMeta; } }
             ok++; continue;
           }
-          r.cutout = await upC(new File([b], 'cutout.png', { type: 'image/png' })); }
+          { const u = await upCut(b, urls[i]); r.cutout = u.url; r.cutMeta = u.meta; } }
         if (ST.proc.model) {
           if (await isCloseup(urls[i])) r.skip = '看起來是特寫（非直式全身），自動略過換模特，省一次呼叫';
           else { const m = await API.makeModel({ imageUrl: r.cutout || urls[i], baseUrl: ST.modelBase || '', prompt: ST.prompt }); r.model = m.url; r.stub = !!m.stub; }
@@ -291,7 +299,7 @@ V.studio = async () => {
         ok++;
       } catch (x) { r.err = x.message || String(x); bad++; }
       c.results.push(r);
-      if (r.cutout && !c.cutout) c.cutout = r.cutout;   // 還沒有的才自動帶入，之後可在成果區改選
+      if (r.cutout && !c.cutout) { c.cutout = r.cutout; c.cutMeta = r.cutMeta || null; }   // 還沒有的才自動帶入，之後可在成果區改選
       if (r.model && !c.model) c.model = r.model;
     }
     ST.busy = false; ST.busyMsg = ''; ST.sel = []; draw();
@@ -300,7 +308,7 @@ V.studio = async () => {
   async function save() {
     sync();
     if (!ST.name.trim() || ST.price === '') { ST.step = 2; draw(); return toast('請填商品名稱與價格'); }
-    const cols = ST.colors.filter(c => c.name.trim() || c.images.length || c.cutout || c.model).map(c => ({ name: c.name.trim(), images: c.images, cutout: c.cutout || '', model: c.model || '' }));
+    const cols = ST.colors.filter(c => c.name.trim() || c.images.length || c.cutout || c.model).map(c => ({ name: c.name.trim(), images: c.images, cutout: c.cutout || '', model: c.model || '', ...(c.cutout && c.cutMeta ? { cutMeta: c.cutMeta } : {}), ...(c.rw ? { rw: c.rw } : {}) }));
     const c0 = cols[0] || {};
     // 進貨價與運費只留在後台畫面，不寫進公開的 products 表
     const body = { name: ST.name.trim(), sub: ST.sub.trim(), price: +ST.price, category: ST.category, arrival_date: null, sizes: (ST.chart.rows.map(r => String(r[0] || '').trim()).filter(Boolean).length ? ST.chart.rows.map(r => String(r[0] || '').trim()).filter(Boolean) : ST.sizes.split(',').map(x => x.trim()).filter(Boolean)),
@@ -357,6 +365,13 @@ function procHTML(s, c) {
 }
 
 // 貼文可用的圖：模特去背圖優先，再來是所有照片（Claude 加的，2026-11-09）
+
+// 首頁輪播的個別微調：大小 80–120%、上下位置 -10～+10（Claude 新增）
+const rwBox = c => { const r = c.rw || { s: 1, y: 0 }; return `<div class="rwbox"><div class="rwpv-stage"><div class="rwpv" id="rwpv" style="--rw-s:${r.s};--rw-dy:${r.y}"><img src="${esc(c.cutout)}" alt=""></div><i class="rwpv-floor"></i></div>
+  <div style="flex:1;min-width:180px"><b>首頁輪播微調</b> <span id="rw_out" style="color:var(--gray)">${Math.round(r.s * 100)}%・${r.y > 0 ? '+' : ''}${r.y}</span>
+  <label style="margin-top:6px">輪播大小</label><input type="range" id="rw_s" min="80" max="120" step="1" value="${Math.round(r.s * 100)}" style="width:100%">
+  <label>上下位置（往上 +／往下 −）</label><input type="range" id="rw_y" min="-10" max="10" step="1" value="${r.y}" style="width:100%">
+  <div style="color:var(--gray);font-size:12px;margin-top:4px">左邊虛線框＝輪播裡一格的大小，地板線＝腳的位置。別的模特看起來比較大／小時再調。</div></div></div>`; };
 const postPool = s => { const c0 = s.colors[0] || {}; return [...new Set([c0.cutout, ...(c0.images || []), ...s.images].filter(Boolean))]; };
 const postImg = s => s.post.img && postPool(s).includes(s.post.img) ? s.post.img : postPool(s)[0] || '';
 function stepHTML(s, cs) {
@@ -370,8 +385,8 @@ function stepHTML(s, cs) {
   <label style="margin-top:8px">此顏色專屬的照片（沒有就沿用共用照片）</label><input type="file" id="f_cfiles" accept="image/*" multiple>
   <div class="thumbs" style="margin:10px 0">${thumbs(c.images, 'c') || '<span style="color:var(--gray)">無（沿用共用照片）</span>'}</div>
   <div class="card" style="margin-top:12px;background:var(--bg2,#fafafa)"><b>模特去背圖</b><span style="color:var(--gray)">　${esc(c.name || '此顏色')}一張；沒有這張的商品不會進首頁輪播</span>
-    ${c.pick ? `<div class="note" style="margin-top:8px">並排圖已切成兩張，點一張當去背圖：</div><div class="bar">${c.pick.map((u, i) => `<div style="text-align:center"><div class="checker"><img src="${esc(u)}" style="height:160px" alt=""></div><button class="btn wine sm" data-pickcut="${i}" style="margin-top:4px">選這張</button></div>`).join('')}</div>` : ''}
-    <div class="bar" style="margin-top:8px;align-items:flex-start">${c.cutout ? `<div class="checker"><img src="${esc(c.cutout)}" style="height:200px" alt=""></div><div style="display:flex;flex-direction:column;gap:6px"><span style="color:var(--gray)">要換一張：到上方照片按另一張的「去背」即可覆蓋</span><button class="btn danger sm" data-rmcut="1">移除</button></div>` : '<span style="color:var(--gray)">尚無。在上方照片按「去背」（建議選全身照），或上傳已去背 PNG。第一次去背會下載約 170MB 模型。</span>'}</div>
+    ${c.pick ? `<div class="note" style="margin-top:8px">並排圖已切成兩張，點一張當去背圖：</div><div class="bar">${c.pick.map((u, i) => `<div style="text-align:center"><div class="checker"><img src="${esc(u.url || u)}" style="height:160px" alt=""></div><button class="btn wine sm" data-pickcut="${i}" style="margin-top:4px">選這張</button></div>`).join('')}</div>` : ''}
+    <div class="bar" style="margin-top:8px;align-items:flex-start">${c.cutout ? `<div class="checker"><img src="${esc(c.cutout)}" style="height:200px" alt=""></div><div style="display:flex;flex-direction:column;gap:6px"><span style="color:var(--gray)">要換一張：到上方照片按另一張的「去背」即可覆蓋</span><button class="btn wine sm" data-cedit="1">手動修圖</button><button class="btn ghost sm" data-retrim="1">重新裁切空白</button><button class="btn danger sm" data-rmcut="1">移除</button></div>${rwBox(c)}` : '<span style="color:var(--gray)">尚無。在上方照片按「去背」（建議選全身照），或上傳已去背 PNG。第一次去背會下載約 170MB 模型。</span>'}</div>
     <div class="bar" style="margin-top:8px"><label style="margin:0">上傳已去背 PNG：</label><input type="file" id="f_cutfile" accept="image/png" style="max-width:240px"></div></div>`; }
   if (s.step === 2) { const cost = s.cost || {}, hasCost = cost.buy !== '' && cost.buy !== undefined;
     const profit = hasCost && s.price !== '' ? (+s.price - +cost.buy - (+cost.ship || 0)) : null;

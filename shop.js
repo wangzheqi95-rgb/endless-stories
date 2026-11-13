@@ -289,7 +289,7 @@ function reservedFeature(name){ showToast('「' + name + '」功能即將推出'
 // 首頁輪播（Runway，取代 banner／衣竿／衣櫃；Claude 加的 2026-11-09）：已上架且有模特去背圖的商品，最新 8 件
 function initRunway(){
   const el = document.getElementById('runway'); if(!el || typeof Runway === 'undefined') return;
-  let list = products.filter(p => p.cutout_url).map(p => ({p, img: p.cutout_url}));
+  let list = products.filter(p => p.cutout_url).map(p => ({p, img: p.cutout_url, rw: (p.colors && p.colors[0] && p.colors[0].rw) || null}));
   if(MOCK_MODE && !list.length) list = products.slice(0, 6).map((p, i) => ({p: Object.assign({}, p, {name: p.name || '示範商品 ' + (i + 1)}), img: 'img/model-cut.png'}));
   Runway.init(el, list, {onPick: (p, size, act) => {
     currentProd = p; currentQty = 1; currentSize = size;
@@ -455,7 +455,7 @@ function openDetail(id){
   document.getElementById('detail-price').textContent = 'NT$ ' + (p.price || 0).toLocaleString();
   document.getElementById('detail-desc').textContent = p.description || '—';
   const preEl = document.getElementById('detail-preorder');
-  if(p.preorder){ preEl.style.display = 'inline-block'; preEl.textContent = '預購・預計 9～12 個工作日到貨'; }
+  if(p.preorder){ preEl.style.display = 'inline-block'; preEl.textContent = '預購・預計 7–14 個工作天到貨'; }
   else { preEl.style.display = 'none'; }
   const sizes = p.sizes || [];
   document.getElementById('detail-size-opts').innerHTML = sizes.map(s => '<button class="sopt" onclick="selSize(this,\'' + esc(s) + '\')">' + esc(s) + '</button>').join('');
@@ -572,7 +572,7 @@ function bindShopEvents(){
 
 // ── 初始化（取代舊的 initMode）──
 function initMode(){
-  if(window.location.search.includes('admin')){ location.replace('admin.html'); return; }
+  if(new URLSearchParams(location.search).has('admin')){ location.replace('admin.html'); return; }   // 只認 ?admin 參數本身，避免 fbclid 等追蹤碼剛好含有 admin 字樣
   document.getElementById('shop-mode').style.display = 'block';
   document.body.classList.add('shop');
   showPage('shop');

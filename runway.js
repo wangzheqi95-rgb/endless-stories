@@ -38,7 +38,7 @@ const Runway = (() => {
     for (let a = 0; a < N; a++) {
       const it = items[a % n], el = document.createElement('div');
       el.className = 'rw__model'; el.dataset.index = a; el.setAttribute('aria-hidden', 'true');
-      el.innerHTML = `<span class="rw__shadow"></span><div class="rw__figure"><div class="rw__art"><img src="${esc(it.img)}" alt="${esc(it.p.name)}" draggable="false" decoding="async" ${a >= n ? 'loading="lazy"' : ''}><button class="rw__hit" data-rw-go="${a}" aria-label="第 ${a % n + 1} 款：${esc(it.p.name)}" tabindex="-1"></button></div></div>`;
+      el.innerHTML = `<span class="rw__shadow"></span><div class="rw__figure"><div class="rw__art"${it.rw ? ` style="--rw-s:${+it.rw.s || 1};--rw-dy:${+it.rw.y || 0}"` : ''}><img src="${esc(it.img)}" alt="${esc(it.p.name)}" draggable="false" decoding="async" ${a >= n ? 'loading="lazy"' : ''}><button class="rw__hit" data-rw-go="${a}" aria-label="第 ${a % n + 1} 款：${esc(it.p.name)}" tabindex="-1"></button></div></div>`;
       const img = el.querySelector('img'); (img.decode ? img.decode() : Promise.resolve()).catch(() => {}).then(() => img.classList.add('is-decoded'));
       actors.appendChild(el); bodies.push({ el, art: el.querySelector('.rw__art'), w: 0, x: 0, g: 0, v: 0, from: 0, trip: false, blur: -1 });
     }
