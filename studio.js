@@ -130,6 +130,38 @@ const persist = () => { if (ST && !ST.id) { try { localStorage.setItem(DK, JSON.
 const clearDraft = () => { try { localStorage.removeItem(DK); } catch (e) {} };
 const listOf = k => k === 's' ? ST.images : curC().images;
 
+
+// ── 從 Chrome 擴充功能「ES 淘寶擷取」匯入（Claude 新增，2026-11-18）──
+// 擴充功能先敲門（PING）→ 這裡回 READY → 擴充功能送資料（IMPORT）→ 這裡回 ACK 並開一個新草稿
+const TBImport = { pending: null, done: null };
+window.addEventListener('message', e => {
+  if (e.source !== window || !e.data) return;
+  if (e.data.type === 'ES_TB_PING') { window.postMessage({ type: 'ES_TB_READY' }, location.origin); return; }
+  if (e.data.type !== 'ES_TB_IMPORT' || !e.data.data) return;
+  window.postMessage({ type: 'ES_TB_ACK', id: e.data.id }, location.origin);
+  if (TBImport.done === e.data.id) return; TBImport.done = e.data.id; TBImport.pending = e.data.data;
+  const app = document.getElementById('app');
+  if (app && !app.classList.contains('hidden') && typeof go === 'function') go('studio');   // 已登入就直接打開；沒登入的話登入後會自動接手
+});
+async function tbApply(cs) {
+  const d = TBImport.pending; TBImport.pending = null; if (!d) return;
+  if (ST && !ST.id && (ST.name || ST.images.length || ST.colors.some(c => c.images.length || c.cutout)) && !confirm('目前有一份還沒完成的上架草稿。要用淘寶匯入的新商品取代它嗎？\n（按「取消」會保留原草稿，這次匯入作廢）')) return;
+  const total = d.mainImgs.length + d.detailImgs.length + d.colors.filter(c => c.img).length; let n = 0;
+  const view0 = msg => { const v = document.getElementById('view'); if (v) v.innerHTML = `<h2>上架工作台</h2><div class="note">從淘寶匯入中：${esc(msg)}<br><span style="color:var(--gray)">請不要關閉這個分頁。</span></div>`; };
+  const up1 = async du => { n++; view0('上傳圖片 ' + n + ' / ' + total); const b = await (await fetch(du)).blob(); return upC(new File([b], 'tb-' + n + '.' + ((b.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg')), { type: b.type })); };
+  const ups = async list => { const r = []; for (const du of list) { try { r.push(await up1(du)); } catch (x) { console.warn(x); } } return r; };
+  view0('準備中…');
+  const S = newST(); S.category = (cs[0] || {}).name || '';
+  S.name = await toTW(d.name || '').catch(() => d.name || ''); S.sku = d.sku || '';
+  S.cost = { buy: d.cny === '' || d.cny == null ? '' : d.cny, ship: '' };
+  S.sizes = (d.sizes || []).join(',');
+  S.images = [...await ups(d.mainImgs || []), ...await ups(d.detailImgs || [])];
+  const cols = [];
+  for (const c of (d.colors || [])) { const nc = newColor(); nc.name = await toTW(c.name).catch(() => c.name); if (c.img) nc.images = await ups([c.img]); cols.push(nc); }
+  S.colors = cols.length ? cols : [newColor()];
+  ST = S; V.studio.restored = false; persist();
+  toast('已從淘寶匯入' + (S.sku ? '（' + S.sku + '）' : '') + '。下一步：挑一張全身照按「去背」');
+}
 V.studio = async () => {
   const [cs, scs, tps] = await Promise.all([R('categories?select=*&order=sort_order'), R('size_charts?select=*').catch(() => []), R('post_templates?select=*&order=id').catch(() => null)]);
   TPL_ERR = !tps; TPLS = tps || [];
@@ -147,6 +179,7 @@ V.studio = async () => {
     }
     V.studio.reset = false; V.studio.editId = null;
   }
+  if (TBImport.pending) await tbApply(cs);
   const draw = () => {
     const s = ST; persist();
     view(`<h2>${s.id ? '編輯商品' : '上架工作台'}</h2>

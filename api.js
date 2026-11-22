@@ -23,7 +23,7 @@ const API = (() => {
     async genCaption(p) {
       if (live()) return call('ai-caption', p);
       await wait(900);
-      return { stub: true, caption: `【新品預購】${p.name}\n${p.sub || ''}\nNT$${p.price}　尺寸 ${(p.sizes || []).join('/')}\n預購制・9～12 個工作日到貨・超商取貨付款\n#EndlessStories #預購 #韓系穿搭` };
+      return { stub: true, caption: `【新品預購】${p.name}\n${p.sub || ''}\nNT$${p.price}　尺寸 ${(p.sizes || []).join('/')}\n預購制・7–14 個工作天到貨・超商取貨付款\n#EndlessStories #預購 #韓系穿搭` };
     },
     // 換模特（AI）：衣服圖 +（可選）基準模特圖 → 回傳 {url}。正式走 Edge Function `gen-model`（Gemini，金鑰在 Supabase Secrets）；
     // 尚未部署時回示範圖（stub:true），只用來測畫面與流程。【Gemini 連線未實測】

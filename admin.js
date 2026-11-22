@@ -171,14 +171,13 @@ V.social = async () => {
 
 // ── 設定檢查：只顯示「有沒有設」，不顯示金鑰內容 ──
 V.settings = async () => {
-  const r = await API.secretsStatus(); const names = { OPENROUTER_API_KEY: 'AI（OpenRouter）金鑰', META_PAGE_TOKEN: 'Facebook 粉專 Token', META_PAGE_ID: 'Facebook 粉專 ID', IG_USER_ID: 'Instagram 商業帳號 ID', THREADS_TOKEN: 'Threads Token', THREADS_USER_ID: 'Threads 使用者 ID' };
-  view(`<h2>設定檢查</h2>${r.unavailable ? '<div class="note">金鑰狀態查不到：Edge Function <code>secrets-status</code> 尚未部署，下表暫時全部顯示未設定。</div>' : r.stub ? '<div class="note">目前是示範資料（尚未部署 Edge Functions），所以全部顯示未設定。</div>' : ''}
-  <div class="card"><table><tr><th>項目</th><th>狀態</th></tr>${Object.entries(names).map(([k, n]) => `<tr><td>${n}<div style="color:var(--gray);font-size:11px">${k}</div></td><td>${r.secrets[k] ? '<span class="tag ok">已設定</span>' : '<span class="tag err">未設定</span>'}</td></tr>`).join('')}</table></div>
+  // 2026-11-22：拿掉「金鑰是否設好」表格（正式專案沒有 secrets-status 函式；小黑決定不做）
+  view(`<h2>設定檢查</h2>
   <div class="card"><b>Sheet 自動檢索</b><div class="note" style="margin-top:6px">在「商品總表」試算表：擴充功能 → Apps Script → 貼上 <code>sheets/apps-script-商品查詢.gs</code> → 部署為網頁應用程式（執行身分：我；存取：任何人）。把網址與你在程式裡設的密語填在這裡（只存在這台瀏覽器）。</div>
     <label>Apps Script 網頁應用程式網址</label><input id="sheet_url" value="${esc(localStorage.getItem('es_sheet_url') || '')}" placeholder="https://script.google.com/macros/s/…/exec" style="width:100%">
     <label style="margin-top:8px">密語（token）</label><input id="sheet_token" type="password" value="${esc(localStorage.getItem('es_sheet_token') || '')}" style="width:100%">
     <div class="bar" style="margin-top:8px"><button class="btn wine sm" id="sheet_save">儲存並測試</button><span id="sheet_msg" style="color:var(--gray)"></span></div></div>
-  <div class="card"><b>金鑰放哪裡？</b><div style="color:var(--gray)">全部放在 Supabase 的 Edge Function Secrets，不放在網頁、不放在這個後台。這頁只回報「有沒有設」，永遠看不到金鑰本身。</div></div>`);
+  <div class="card"><b>金鑰放哪裡？</b><div style="color:var(--gray)">全部放在 Supabase 的 Edge Function Secrets，不放在網頁、不放在這個後台。要確認有沒有設，到 Supabase 後台 → Edge Functions → Secrets 查看。</div></div>`);
   $('#view').onclick = guard(async e => { if (e.target.id !== 'sheet_save') return;
     const url = $('#sheet_url').value.trim(), tk = $('#sheet_token').value.trim(); localStorage.setItem('es_sheet_url', url); localStorage.setItem('es_sheet_token', tk);
     $('#sheet_msg').textContent = '測試中…'; if (typeof SheetDB !== 'undefined') { const rows = await SheetDB.load(true); $('#sheet_msg').textContent = SheetDB.err && !rows.length ? SheetDB.err : '可以連線：讀到 ' + rows.length + ' 件商品' + (SheetDB.err ? '（' + SheetDB.err + '）' : ''); } });
